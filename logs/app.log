@@ -133,3 +133,10 @@ google.genai.errors.ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 
 2026-07-26 18:01:35,437 | INFO     | rag_engine | session=195656a9-fcb4-4d21-b95e-d0e67e3fb091 | Generated reply (lang=english, relevant_context=True, handoff=False)
 2026-07-26 18:09:19,419 | INFO     | rag_engine | session=195656a9-fcb4-4d21-b95e-d0e67e3fb091 | Generated reply (lang=english, relevant_context=True, handoff=False)
 2026-07-26 18:14:59,211 | INFO     | rag_engine | session=5fe3a8f0-051a-4888-b441-cf0c9d4f7f67 | Generated reply (lang=english, relevant_context=True, handoff=True)
+2026-07-26 18:20:10,043 | INFO     | __main__ | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | New chat session started
+2026-07-26 18:20:20,602 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 50.6 ms
+2026-07-26 18:21:10,857 | INFO     | rag_engine | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | [BENCHMARK] Gemini API call took 50252.6 ms
+2026-07-26 18:21:10,858 | INFO     | rag_engine | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 18:21:10,860 | INFO     | rag_engine | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | [BENCHMARK] Total generate_reply turn took 50743.0 ms
+2026-07-26 18:26:49,406 | INFO     | memory | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | Session memory cleared
+2026-07-26 18:26:49,406 | INFO     | __main__ | session=320a8706-a5b8-4e8b-8db8-e0f389a191cf | Chat session ended

@@ -22,6 +22,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List
@@ -102,10 +103,13 @@ def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChun
     """Query ChromaDB for the most relevant knowledge-base chunks."""
     query_embedding = _embedding_model.encode([query], normalize_embeddings=True)
 
+    _t0 = time.perf_counter()
     results = _collection.query(
         query_embeddings=query_embedding.tolist(),
         n_results=top_k or settings.TOP_K_RESULTS,
     )
+    _elapsed_ms = (time.perf_counter() - _t0) * 1000
+    logger.info("[BENCHMARK] Vector DB query took %.1f ms", _elapsed_ms)
 
     documents = results.get("documents", [[]])[0]
     distances = results.get("distances", [[]])[0]
@@ -291,6 +295,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         (reply_text, handoff_triggered)
     """
     language_hint = detect_language(user_input)
+    _turn_start = time.perf_counter()
     chunks = retrieve_context(user_input)
     relevant = _has_relevant_context(chunks)
 
@@ -305,6 +310,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     user_turn = build_user_turn(user_input, history_text)
 
     try:
+        _t0 = time.perf_counter()
         response = _genai_client.models.generate_content(
             model=settings.GEMINI_MODEL,
             contents=user_turn,
@@ -313,6 +319,12 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
                 temperature=settings.GEMINI_TEMPERATURE,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
             ),
+        )
+        _elapsed_ms = (time.perf_counter() - _t0) * 1000
+        logger.info(
+            "[BENCHMARK] Gemini API call took %.1f ms",
+            _elapsed_ms,
+            extra={"session_id": session_id},
         )
         reply_text = (response.text or "").strip()
         if not reply_text:
@@ -345,6 +357,11 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         language_hint,
         relevant,
         handoff_triggered,
+        extra={"session_id": session_id},
+    )
+    logger.info(
+        "[BENCHMARK] Total generate_reply turn took %.1f ms",
+        (time.perf_counter() - _turn_start) * 1000,
         extra={"session_id": session_id},
     )
 
