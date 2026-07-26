@@ -21,7 +21,7 @@ class Settings(BaseSettings):
 
     # --- Google Gemini (google-genai SDK) ---
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-2.5-flash"
+    GEMINI_MODEL: str = "gemini-3.6-flash"
     GEMINI_TEMPERATURE: float = 0.3
     GEMINI_MAX_OUTPUT_TOKENS: int = 1024
 

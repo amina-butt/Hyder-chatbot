@@ -130,3 +130,6 @@ google.genai.errors.ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 
 2026-07-26 17:14:30,584 | INFO     | rag_engine | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Generated reply (lang=english, relevant_context=True, handoff=False)
 2026-07-26 17:22:30,056 | INFO     | memory | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Session memory cleared
 2026-07-26 17:22:30,058 | INFO     | __main__ | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Chat session ended
+2026-07-26 18:01:35,437 | INFO     | rag_engine | session=195656a9-fcb4-4d21-b95e-d0e67e3fb091 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 18:09:19,419 | INFO     | rag_engine | session=195656a9-fcb4-4d21-b95e-d0e67e3fb091 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 18:14:59,211 | INFO     | rag_engine | session=5fe3a8f0-051a-4888-b441-cf0c9d4f7f67 | Generated reply (lang=english, relevant_context=True, handoff=True)

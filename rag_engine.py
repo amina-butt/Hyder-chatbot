@@ -24,7 +24,7 @@ import os
 import re
 from dataclasses import dataclass
 from datetime import datetime
-from typing import List, Tuple
+from typing import List
 
 import chromadb
 from google import genai
@@ -278,14 +278,20 @@ def build_user_turn(user_message: str, history_text: str) -> str:
 # Generation
 # --------------------------------------------------------------------------
 
-def generate_reply(session_id: str, user_message: str) -> Tuple[str, bool]:
+def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     """Run the full RAG pipeline for one user turn.
+
+    All heavy objects this function relies on (embedding model, Chroma
+    client/collection, Gemini client) are module-level singletons created
+    once at import time — see the top of this file. This function itself
+    only does cheap per-call work: embedding one short query, a vector
+    query, string formatting, and one network call to Gemini.
 
     Returns:
         (reply_text, handoff_triggered)
     """
-    language_hint = detect_language(user_message)
-    chunks = retrieve_context(user_message)
+    language_hint = detect_language(user_input)
+    chunks = retrieve_context(user_input)
     relevant = _has_relevant_context(chunks)
 
     context_block = (
@@ -296,7 +302,7 @@ def generate_reply(session_id: str, user_message: str) -> Tuple[str, bool]:
 
     history_text = conversation_memory.get_history_as_text(session_id)
     system_prompt = build_system_prompt(language_hint, context_block)
-    user_turn = build_user_turn(user_message, history_text)
+    user_turn = build_user_turn(user_input, history_text)
 
     try:
         response = _genai_client.models.generate_content(
@@ -327,11 +333,11 @@ def generate_reply(session_id: str, user_message: str) -> Tuple[str, bool]:
     # warranty, installments, etc.). Off-topic queries (recipes, trivia,
     # unrelated companies, coding help, etc.) are intentionally skipped so
     # the gap log stays a useful, actionable list for KB expansion.
-    if not relevant and _is_domain_relevant_query(user_message):
-        log_unanswered_query(user_message, language_hint)
+    if not relevant and _is_domain_relevant_query(user_input):
+        log_unanswered_query(user_input, language_hint)
 
     # Update sliding-window memory with this exchange
-    conversation_memory.add_message(session_id, "user", user_message)
+    conversation_memory.add_message(session_id, "user", user_input)
     conversation_memory.add_message(session_id, "assistant", reply_text)
 
     logger.info(
