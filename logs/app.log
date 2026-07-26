@@ -1,0 +1,132 @@
+2026-07-25 21:05:49,863 | INFO     | __main__ | session=ingest | Starting knowledge base ingestion...
+2026-07-25 21:05:49,864 | ERROR    | __main__ | session=ingest | Data file not found at data/hyder_bikes.txt
+2026-07-25 21:13:19,535 | INFO     | __main__ | session=ingest | Starting knowledge base ingestion...
+2026-07-25 21:13:19,594 | INFO     | __main__ | session=ingest | Text split into 20 chunks
+2026-07-25 21:13:19,595 | INFO     | __main__ | session=ingest | Loading embedding model 'all-MiniLM-L6-v2'...
+2026-07-25 21:13:46,134 | INFO     | __main__ | session=ingest | Encoding 20 chunks...
+2026-07-25 21:13:51,377 | INFO     | __main__ | session=ingest | Ingestion complete. Collection 'hyder_bikes_kb' now has 20 items.
+2026-07-25 21:14:36,422 | INFO     | __main__ | session=c490da36-75d1-46e9-b35c-8bf446810b65 | New chat session started
+2026-07-25 21:15:37,325 | ERROR    | rag_engine | session=c490da36-75d1-46e9-b35c-8bf446810b65 | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 229, in generate_reply
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Your project has been denied access. Please contact support.', 'status': 'PERMISSION_DENIED'}}
+2026-07-25 21:15:37,412 | INFO     | rag_engine | session=c490da36-75d1-46e9-b35c-8bf446810b65 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-25 21:16:21,581 | INFO     | memory | session=c490da36-75d1-46e9-b35c-8bf446810b65 | Session memory cleared
+2026-07-25 21:16:21,582 | INFO     | __main__ | session=c490da36-75d1-46e9-b35c-8bf446810b65 | Chat session ended
+2026-07-25 21:20:28,216 | INFO     | __main__ | session=f2808bd4-f50c-4a90-8b2a-90902c0e7133 | New chat session started
+2026-07-25 21:21:01,940 | ERROR    | rag_engine | session=f2808bd4-f50c-4a90-8b2a-90902c0e7133 | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 229, in generate_reply
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 'message': 'Your project has been denied access. Please contact support.', 'status': 'PERMISSION_DENIED'}}
+2026-07-25 21:21:01,971 | INFO     | rag_engine | session=f2808bd4-f50c-4a90-8b2a-90902c0e7133 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-25 21:22:24,788 | INFO     | memory | session=f2808bd4-f50c-4a90-8b2a-90902c0e7133 | Session memory cleared
+2026-07-25 21:22:24,789 | INFO     | __main__ | session=f2808bd4-f50c-4a90-8b2a-90902c0e7133 | Chat session ended
+2026-07-25 22:09:11,612 | INFO     | __main__ | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | New chat session started
+2026-07-25 22:10:28,511 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-25 22:11:31,448 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=roman_urdu, relevant_context=True, handoff=True)
+2026-07-25 22:12:54,599 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=urdu, relevant_context=False, handoff=True)
+2026-07-25 22:14:47,455 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-25 22:15:43,942 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=english, relevant_context=True, handoff=True)
+2026-07-25 22:17:43,739 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-25 22:21:17,489 | INFO     | rag_engine | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-25 22:25:52,529 | INFO     | memory | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Session memory cleared
+2026-07-25 22:25:52,530 | INFO     | __main__ | session=bb3ced57-6ce2-43bb-9ddc-e33f8c25b7cb | Chat session ended
+2026-07-25 22:41:20,338 | INFO     | __main__ | session=4659fd1d-1a2f-4753-8542-b131db6a7426 | New chat session started
+2026-07-25 22:51:26,054 | INFO     | rag_engine | session=4659fd1d-1a2f-4753-8542-b131db6a7426 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-25 22:55:10,087 | INFO     | rag_engine | session=4659fd1d-1a2f-4753-8542-b131db6a7426 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-25 22:55:58,340 | INFO     | memory | session=4659fd1d-1a2f-4753-8542-b131db6a7426 | Session memory cleared
+2026-07-25 22:55:58,341 | INFO     | __main__ | session=4659fd1d-1a2f-4753-8542-b131db6a7426 | Chat session ended
+2026-07-26 17:06:04,043 | INFO     | __main__ | session=8313ed29-c62f-4f86-bc45-2c32eecfd080 | New chat session started
+2026-07-26 17:11:05,792 | INFO     | memory | session=8313ed29-c62f-4f86-bc45-2c32eecfd080 | Session memory cleared
+2026-07-26 17:11:05,796 | INFO     | __main__ | session=8313ed29-c62f-4f86-bc45-2c32eecfd080 | Chat session ended
+2026-07-26 17:12:00,096 | INFO     | __main__ | session=89fb85cb-4813-47b3-9827-1451c8ed635a | New chat session started
+2026-07-26 17:12:32,114 | INFO     | rag_engine | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Generated reply (lang=english, relevant_context=True, handoff=True)
+2026-07-26 17:14:30,584 | INFO     | rag_engine | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 17:22:30,056 | INFO     | memory | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Session memory cleared
+2026-07-26 17:22:30,058 | INFO     | __main__ | session=89fb85cb-4813-47b3-9827-1451c8ed635a | Chat session ended

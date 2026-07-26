@@ -1,0 +1,20 @@
+# Environment variables (CRITICAL: NEVER COMMIT THIS)
+.env
+.env.*
+!.env.example
+
+# Python virtual environments
+venv/
+.venv/
+env/
+
+# Python cache files
+__pycache__/
+*.pyc
+
+# IDE / Editor settings
+.vscode/
+.idea/
+
+# Local CSV data
+unanswered_queries.csv
