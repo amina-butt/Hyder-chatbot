@@ -16,5 +16,8 @@ __pycache__/
 .vscode/
 .idea/
 
+logs/
+*.log
+
 # Local CSV data
 unanswered_queries.csv
