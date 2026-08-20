@@ -136,3 +136,962 @@ google.genai.errors.ClientError: 403 PERMISSION_DENIED. {'error': {'code': 403, 
 2026-07-26 18:50:11,896 | INFO     | rag_engine | session=b5e8101a-cab9-4cb2-b42d-05abb7167a9d | Generated reply (lang=english, relevant_context=True, handoff=False)
 2026-07-26 18:50:36,744 | INFO     | memory | session=b5e8101a-cab9-4cb2-b42d-05abb7167a9d | Session memory cleared
 2026-07-26 18:51:05,409 | INFO     | rag_engine | session=5b189cb2-2b6d-4965-9ebd-4c2e2f218b88 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 19:05:24,231 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 119.3 ms
+2026-07-26 19:05:55,683 | INFO     | rag_engine | session=- | [BENCHMARK] Audio transcription took 54799.1 ms
+2026-07-26 19:06:54,775 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Gemini API call took 90541.5 ms
+2026-07-26 19:06:54,776 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 19:06:54,776 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Total generate_reply turn took 91140.8 ms
+2026-07-26 19:07:55,024 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.1 ms
+2026-07-26 19:08:54,498 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Gemini API call took 59472.6 ms
+2026-07-26 19:08:54,501 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 19:08:54,501 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Total generate_reply turn took 59513.0 ms
+2026-07-26 19:11:38,161 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 2.9 ms
+2026-07-26 19:12:04,724 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Gemini API call took 26561.9 ms
+2026-07-26 19:12:04,726 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 19:12:04,726 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Total generate_reply turn took 26598.2 ms
+2026-07-26 19:12:35,303 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.7 ms
+2026-07-26 19:13:01,827 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Gemini API call took 26522.9 ms
+2026-07-26 19:13:01,829 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 19:13:01,831 | INFO     | rag_engine | session=03e1ee32-dcd6-44a2-a479-db272e18dc14 | [BENCHMARK] Total generate_reply turn took 26566.2 ms
+2026-07-26 19:16:59,747 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 147.4 ms
+2026-07-26 19:17:05,388 | ERROR    | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 314, in generate_reply
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 186, in raise_error
+    raise ServerError(status_code, response_json, response)
+google.genai.errors.ServerError: 503 UNAVAILABLE. {'error': {'code': 503, 'message': 'This model is currently experiencing high demand. Spikes in demand are usually temporary. Please try again later.', 'status': 'UNAVAILABLE'}}
+2026-07-26 19:17:05,688 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-26 19:17:05,689 | INFO     | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 19:17:05,690 | INFO     | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | [BENCHMARK] Total generate_reply turn took 6559.2 ms
+2026-07-26 19:19:03,646 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.6 ms
+2026-07-26 19:19:30,754 | INFO     | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | [BENCHMARK] Gemini API call took 27106.5 ms
+2026-07-26 19:19:30,760 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-26 19:19:30,766 | INFO     | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 19:19:30,767 | INFO     | rag_engine | session=2c1ffa32-21c4-45a1-a2f4-1cc567a32374 | [BENCHMARK] Total generate_reply turn took 27172.2 ms
+2026-07-26 23:18:01,421 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 122.7 ms
+2026-07-26 23:18:48,288 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Gemini API call took 46866.0 ms
+2026-07-26 23:18:48,292 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Generated reply (lang=english, relevant_context=True, handoff=False)
+2026-07-26 23:18:48,293 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Total generate_reply turn took 47655.0 ms
+2026-07-26 23:21:44,885 | INFO     | rag_engine | session=- | [BENCHMARK] Audio transcription took 88871.7 ms
+2026-07-26 23:21:45,142 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.1 ms
+2026-07-26 23:21:49,896 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Gemini API call took 4753.4 ms
+2026-07-26 23:21:49,897 | WARNING  | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Gemini response hit max_output_tokens and was truncated; trimming to the last complete sentence
+2026-07-26 23:21:49,898 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Generated reply (lang=urdu, relevant_context=True, handoff=False)
+2026-07-26 23:21:49,898 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Total generate_reply turn took 5003.9 ms
+2026-07-26 23:22:45,127 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.5 ms
+2026-07-26 23:25:21,345 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Gemini API call took 156217.4 ms
+2026-07-26 23:25:21,347 | WARNING  | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Gemini response hit max_output_tokens and was truncated; trimming to the last complete sentence
+2026-07-26 23:25:21,349 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:25:21,354 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Total generate_reply turn took 156318.0 ms
+2026-07-26 23:26:13,729 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.7 ms
+2026-07-26 23:27:21,451 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Gemini API call took 67721.9 ms
+2026-07-26 23:27:21,452 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:27:21,453 | INFO     | rag_engine | session=9efcfecb-e982-4a83-b05a-ab7fd34eb2b9 | [BENCHMARK] Total generate_reply turn took 67782.5 ms
+2026-07-26 23:34:51,330 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 142.1 ms
+2026-07-26 23:36:15,634 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Gemini API call took 84302.8 ms
+2026-07-26 23:36:15,640 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Generated reply (lang=english, relevant_context=True, handoff=True)
+2026-07-26 23:36:15,641 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Total generate_reply turn took 84764.8 ms
+2026-07-26 23:36:32,167 | ERROR    | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Query rewrite failed; falling back to heuristic expansion
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 195, in _build_retrieval_query
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<20 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 28.172652848s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.6-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '28s'}]}}
+2026-07-26 23:36:32,417 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 5.2 ms
+2026-07-26 23:36:32,863 | ERROR    | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 477, in generate_reply
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 27.592730529s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '27s'}]}}
+2026-07-26 23:36:32,870 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:36:32,870 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Total generate_reply turn took 1505.4 ms
+2026-07-26 23:37:01,624 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.0 ms
+2026-07-26 23:38:26,665 | ERROR    | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 477, in generate_reply
+    history_text = conversation_memory.get_history_as_text(session_id)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+            contents=user_turn,
+    
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 33.702045822s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '33s'}]}}
+2026-07-26 23:38:26,694 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-26 23:38:26,703 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:38:26,705 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Total generate_reply turn took 85175.4 ms
+2026-07-26 23:39:34,400 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Query rewrite took 169602.0 ms
+2026-07-26 23:39:34,485 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.0 ms
+2026-07-26 23:39:34,797 | ERROR    | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 477, in generate_reply
+    history_text = conversation_memory.get_history_as_text(session_id)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+            contents=user_turn,
+    
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 25.518433348s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '25s'}]}}
+2026-07-26 23:39:34,808 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:39:34,809 | INFO     | rag_engine | session=5bda2af2-a397-4608-8c2c-a86138dcb1ea | [BENCHMARK] Total generate_reply turn took 170010.9 ms
+2026-07-26 23:41:35,403 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 67.8 ms
+2026-07-26 23:41:36,724 | ERROR    | rag_engine | session=909cacfa-39a6-4a93-bce3-f50918a48b45 | Gemini generation failed
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 483, in generate_reply
+    response = _genai_client.models.generate_content(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 23.806540593s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '23s'}]}}
+2026-07-26 23:41:36,741 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-26 23:41:36,742 | INFO     | rag_engine | session=909cacfa-39a6-4a93-bce3-f50918a48b45 | Generated reply (lang=english, relevant_context=False, handoff=True)
+2026-07-26 23:41:36,743 | INFO     | rag_engine | session=909cacfa-39a6-4a93-bce3-f50918a48b45 | [BENCHMARK] Total generate_reply turn took 2170.8 ms
+2026-07-27 00:02:16,974 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 89.7 ms
+2026-07-27 00:02:39,105 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 21.169633455s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '21s'}]}}) — retrying in 0.6s
+2026-07-27 00:02:40,036 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 20.240529239s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '20s'}]}}) — retrying in 1.2s
+2026-07-27 00:02:41,577 | ERROR    | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 18.699085426s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '18s'}]}}
+2026-07-27 00:02:41,606 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-27 00:02:41,609 | INFO     | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-27 00:02:41,612 | INFO     | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | [BENCHMARK] Total generate_reply turn took 24909.1 ms
+2026-07-27 00:02:59,448 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.3 ms
+2026-07-27 00:03:00,698 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 59.587366306s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '59s'}]}}) — retrying in 0.6s
+2026-07-27 00:03:01,626 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 58.650160246s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'model': 'gemini-3.6-flash', 'location': 'global'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '58s'}]}}) — retrying in 1.2s
+2026-07-27 00:03:03,152 | ERROR    | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': 'You exceeded your current quota, please check your plan and billing details. For more information on this error, head to: https://ai.google.dev/gemini-api/docs/rate-limits. To monitor your current usage, head to: https://ai.dev/rate-limit. \n* Quota exceeded for metric: generativelanguage.googleapis.com/generate_content_free_tier_requests, limit: 20, model: gemini-3.6-flash\nPlease retry in 57.133513205s.', 'status': 'RESOURCE_EXHAUSTED', 'details': [{'@type': 'type.googleapis.com/google.rpc.Help', 'links': [{'description': 'Learn more about Gemini API quotas', 'url': 'https://ai.google.dev/gemini-api/docs/rate-limits'}]}, {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaMetric': 'generativelanguage.googleapis.com/generate_content_free_tier_requests', 'quotaId': 'GenerateRequestsPerDayPerProjectPerModel-FreeTier', 'quotaDimensions': {'location': 'global', 'model': 'gemini-3.6-flash'}, 'quotaValue': '20'}]}, {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': '57s'}]}}
+2026-07-27 00:03:03,212 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-27 00:03:03,217 | INFO     | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-27 00:03:03,226 | INFO     | rag_engine | session=b0f583e8-108f-4fc5-92d5-aeb41f12f097 | [BENCHMARK] Total generate_reply turn took 3835.7 ms
+2026-07-27 00:13:15,578 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 75.2 ms
+2026-07-27 00:16:05,300 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-27 00:16:06,448 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-27 00:16:08,145 | ERROR    | rag_engine | session=b82dcdfa-c8f4-424a-94ec-73fee351c37d | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}
+2026-07-27 00:16:08,235 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-27 00:16:08,241 | INFO     | rag_engine | session=b82dcdfa-c8f4-424a-94ec-73fee351c37d | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-27 00:16:08,242 | INFO     | rag_engine | session=b82dcdfa-c8f4-424a-94ec-73fee351c37d | [BENCHMARK] Total generate_reply turn took 172998.0 ms
+2026-07-28 03:56:11,816 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 113.4 ms
+2026-07-28 03:56:13,756 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-28 03:56:14,999 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-28 03:56:16,750 | ERROR    | rag_engine | session=32e8d8b1-5edd-40e0-b084-6a2816f5b343 | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}
+2026-07-28 03:56:16,771 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 03:56:16,775 | INFO     | rag_engine | session=32e8d8b1-5edd-40e0-b084-6a2816f5b343 | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-28 03:56:16,775 | INFO     | rag_engine | session=32e8d8b1-5edd-40e0-b084-6a2816f5b343 | [BENCHMARK] Total generate_reply turn took 6096.5 ms
+2026-07-28 04:00:38,958 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 186.1 ms
+2026-07-28 04:01:02,488 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-28 04:01:03,610 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-28 04:01:05,248 | ERROR    | rag_engine | session=021f61c1-4832-4d98-9635-f15ba650205d | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}
+2026-07-28 04:01:05,268 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:01:05,270 | INFO     | rag_engine | session=021f61c1-4832-4d98-9635-f15ba650205d | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-28 04:01:05,271 | INFO     | rag_engine | session=021f61c1-4832-4d98-9635-f15ba650205d | [BENCHMARK] Total generate_reply turn took 28044.2 ms
+2026-07-28 04:11:17,410 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 295.2 ms
+2026-07-28 04:11:19,151 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-28 04:11:20,271 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-28 04:11:21,992 | ERROR    | rag_engine | session=2bc6e3c0-b05c-4dee-a70a-81ab48bbb115 | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}
+2026-07-28 04:11:22,230 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:11:22,235 | INFO     | rag_engine | session=2bc6e3c0-b05c-4dee-a70a-81ab48bbb115 | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-28 04:11:22,237 | INFO     | rag_engine | session=2bc6e3c0-b05c-4dee-a70a-81ab48bbb115 | [BENCHMARK] Total generate_reply turn took 6467.8 ms
+2026-07-28 04:17:09,754 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 97.8 ms
+2026-07-28 04:19:17,535 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-28 04:19:18,628 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-28 04:19:20,251 | ERROR    | rag_engine | session=08ae875d-d1f7-4fc9-bf0a-78edfbf583f1 | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'This model models/gemini-2.5-flash is no longer available to new users. Please update your code to use a newer model for the latest features and improvements.', 'status': 'NOT_FOUND'}}
+2026-07-28 04:19:20,394 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:19:20,399 | INFO     | rag_engine | session=08ae875d-d1f7-4fc9-bf0a-78edfbf583f1 | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-28 04:19:20,400 | INFO     | rag_engine | session=08ae875d-d1f7-4fc9-bf0a-78edfbf583f1 | [BENCHMARK] Total generate_reply turn took 130949.7 ms
+2026-07-28 04:23:22,193 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 92.2 ms
+2026-07-28 04:24:47,976 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}) — retrying in 0.6s
+2026-07-28 04:24:48,973 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 2/3 (404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}) — retrying in 1.2s
+2026-07-28 04:24:50,490 | ERROR    | rag_engine | session=a6eea1ee-1895-4cb6-988a-0824cef2edef | Gemini generation failed after retries
+Traceback (most recent call last):
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 556, in generate_reply
+    response = _call_gemini_with_retry(
+        model=settings.GEMINI_MODEL,
+    ...<5 lines>...
+        ),
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 95, in _call_gemini_with_retry
+    raise last_exc
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\rag_engine.py", line 80, in _call_gemini_with_retry
+    return _genai_client.models.generate_content(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        model=model, contents=contents, config=config
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 6641, in generate_content
+    response = self._generate_content(
+        model=model, contents=contents, config=parsed_config_to_call
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\models.py", line 5067, in _generate_content
+    response = self._api_client.request(
+        'post', path, request_dict, http_options
+    )
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1700, in request
+    response = self._request(http_request, http_options, stream=False)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1487, in _request
+    return self._retry(self._request_once, http_request, stream)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 470, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 413, in exc_check
+    raise retry_exc.reraise()
+          ~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 184, in reraise
+    raise self.last_attempt.result()
+          ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 443, in result
+    return self.__get_result()
+           ~~~~~~~~~~~~~~~~~^^
+  File "C:\Python314\Lib\concurrent\futures\_base.py", line 395, in __get_result
+    raise self._exception
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\tenacity\__init__.py", line 473, in __call__
+    result = fn(*args, **kwargs)
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\_api_client.py", line 1464, in _request_once
+    errors.APIError.raise_for_response(response)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 155, in raise_for_response
+    cls.raise_error(response.status_code, response_json, response)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\HP ELITEBOOK\Documents\hyder-chatbot\venv\Lib\site-packages\google\genai\errors.py", line 184, in raise_error
+    raise ClientError(status_code, response_json, response)
+google.genai.errors.ClientError: 404 NOT_FOUND. {'error': {'code': 404, 'message': 'models/gemini-1.5-flash is not found for API version v1beta, or is not supported for generateContent. Call ModelService.ListModels to see the list of available models and their supported methods.', 'status': 'NOT_FOUND'}}
+2026-07-28 04:24:50,527 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:24:50,529 | INFO     | rag_engine | session=a6eea1ee-1895-4cb6-988a-0824cef2edef | Generated reply (lang=english, relevant_context=False, api_failure=True, handoff=True)
+2026-07-28 04:24:50,531 | INFO     | rag_engine | session=a6eea1ee-1895-4cb6-988a-0824cef2edef | [BENCHMARK] Total generate_reply turn took 88565.9 ms
+2026-07-28 04:27:45,823 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 97.1 ms
+2026-07-28 04:28:32,967 | INFO     | rag_engine | session=ef0225d0-d6f6-4d07-9763-3bacc809bca8 | [BENCHMARK] Gemini API call took 47143.3 ms
+2026-07-28 04:28:32,974 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:28:32,982 | INFO     | rag_engine | session=ef0225d0-d6f6-4d07-9763-3bacc809bca8 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-28 04:28:32,985 | INFO     | rag_engine | session=ef0225d0-d6f6-4d07-9763-3bacc809bca8 | [BENCHMARK] Total generate_reply turn took 47490.3 ms
+2026-07-28 04:31:30,919 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 106.9 ms
+2026-07-28 04:32:57,216 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | [BENCHMARK] Gemini API call took 86296.2 ms
+2026-07-28 04:32:57,220 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-28 04:32:57,222 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-28 04:32:57,225 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | [BENCHMARK] Total generate_reply turn took 86683.9 ms
+2026-07-28 04:42:51,757 | INFO     | rag_engine | session=- | [BENCHMARK] Audio transcription took 76268.2 ms
+2026-07-28 04:42:52,021 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 10.8 ms
+2026-07-28 04:43:22,367 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | [BENCHMARK] Gemini API call took 30344.9 ms
+2026-07-28 04:43:22,373 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-28 04:43:22,386 | INFO     | rag_engine | session=2d8ebd82-2c39-4f0f-a087-62e0eb3e041f | [BENCHMARK] Total generate_reply turn took 30598.3 ms
+2026-07-29 18:46:52,956 | INFO     | rag_engine | session=- | [BENCHMARK] Audio transcription took 113786.9 ms
+2026-07-29 18:49:16,703 | INFO     | rag_engine | session=e9106eab-5fcc-44a7-b63f-f5561aaf2526 | [BENCHMARK] Query rewrite took 149353.5 ms
+2026-07-29 18:49:16,872 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 11.9 ms
+2026-07-29 18:49:17,789 | INFO     | rag_engine | session=e9106eab-5fcc-44a7-b63f-f5561aaf2526 | [BENCHMARK] Gemini API call took 916.0 ms
+2026-07-29 18:49:17,790 | INFO     | rag_engine | session=e9106eab-5fcc-44a7-b63f-f5561aaf2526 | Generated reply (lang=urdu, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 18:49:17,791 | INFO     | rag_engine | session=e9106eab-5fcc-44a7-b63f-f5561aaf2526 | [BENCHMARK] Total generate_reply turn took 150441.6 ms
+2026-07-29 18:53:40,085 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Query rewrite took 65224.0 ms
+2026-07-29 18:53:41,262 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 154.8 ms
+2026-07-29 18:53:44,073 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Gemini API call took 2809.8 ms
+2026-07-29 18:53:44,074 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | Generated reply (lang=urdu, relevant_context=True, api_failure=False, handoff=False)
+2026-07-29 18:53:44,075 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Total generate_reply turn took 69214.0 ms
+2026-07-29 18:54:53,847 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Query rewrite took 51091.8 ms
+2026-07-29 18:54:53,959 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 8.1 ms
+2026-07-29 18:55:23,471 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Gemini API call took 29510.4 ms
+2026-07-29 18:55:23,472 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | Generated reply (lang=roman_urdu, relevant_context=True, api_failure=False, handoff=False)
+2026-07-29 18:55:23,473 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Total generate_reply turn took 80717.8 ms
+2026-07-29 18:57:22,923 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 9.5 ms
+2026-07-29 18:57:46,347 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Gemini API call took 23422.8 ms
+2026-07-29 18:57:46,356 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-29 18:57:46,359 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 18:57:46,375 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Total generate_reply turn took 23773.6 ms
+2026-07-29 18:58:00,392 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.5 ms
+2026-07-29 19:01:09,562 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Gemini API call took 189169.2 ms
+2026-07-29 19:01:09,563 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:01:09,564 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Total generate_reply turn took 189262.6 ms
+2026-07-29 19:06:58,859 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 44.7 ms
+2026-07-29 19:07:00,466 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Gemini API call took 1606.8 ms
+2026-07-29 19:07:00,472 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-29 19:07:00,473 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:07:00,474 | INFO     | rag_engine | session=32667d97-c8b2-42ac-b275-3ff2809fd096 | [BENCHMARK] Total generate_reply turn took 2481.9 ms
+2026-07-29 19:11:17,334 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 122.1 ms
+2026-07-29 19:14:10,416 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 173081.4 ms
+2026-07-29 19:14:10,425 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-29 19:14:10,427 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:14:10,428 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 173438.2 ms
+2026-07-29 19:14:41,929 | WARNING  | rag_engine | session=- | Gemini call failed on attempt 1/3 ([WinError 10053] An established connection was aborted by the software in your host machine) — retrying in 0.6s
+2026-07-29 19:14:46,555 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Query rewrite took 32419.8 ms
+2026-07-29 19:14:47,028 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.6 ms
+2026-07-29 19:14:48,586 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 1557.4 ms
+2026-07-29 19:14:48,587 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=roman_urdu, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:14:48,587 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 34451.9 ms
+2026-07-29 19:15:08,471 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Query rewrite took 2900.2 ms
+2026-07-29 19:15:08,599 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.8 ms
+2026-07-29 19:15:09,653 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 1053.5 ms
+2026-07-29 19:15:09,656 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:15:09,661 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 4090.3 ms
+2026-07-29 19:15:36,228 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 3.8 ms
+2026-07-29 19:15:37,651 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 1421.4 ms
+2026-07-29 19:15:37,652 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:15:37,652 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 1523.4 ms
+2026-07-29 19:16:01,988 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 6.3 ms
+2026-07-29 19:16:29,312 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 27322.7 ms
+2026-07-29 19:16:29,318 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-07-29 19:16:29,323 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-07-29 19:16:29,334 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 27415.2 ms
+2026-07-29 19:17:17,227 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Query rewrite took 2902.9 ms
+2026-07-29 19:17:17,335 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.6 ms
+2026-07-29 19:17:18,235 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Gemini API call took 898.5 ms
+2026-07-29 19:17:18,236 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | Generated reply (lang=english, relevant_context=True, api_failure=False, handoff=True)
+2026-07-29 19:17:18,240 | INFO     | rag_engine | session=100d6dad-d035-4973-9406-c2b71f122bf7 | [BENCHMARK] Total generate_reply turn took 3915.5 ms
+2026-08-07 10:54:15,868 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 158.6 ms
+2026-08-07 10:55:00,233 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | [BENCHMARK] Gemini API call took 44364.0 ms
+2026-08-07 10:55:00,249 | INFO     | rag_engine | session=- | Knowledge gap logged to unanswered_queries.csv
+2026-08-07 10:55:00,261 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | Generated reply (lang=english, relevant_context=False, api_failure=False, handoff=True)
+2026-08-07 10:55:00,265 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | [BENCHMARK] Total generate_reply turn took 45433.2 ms
+2026-08-07 10:55:27,212 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | [BENCHMARK] Query rewrite took 2411.3 ms
+2026-08-07 10:55:27,328 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 7.1 ms
+2026-08-07 10:55:28,342 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | [BENCHMARK] Gemini API call took 1013.3 ms
+2026-08-07 10:55:28,343 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | Generated reply (lang=english, relevant_context=True, api_failure=False, handoff=True)
+2026-08-07 10:55:28,344 | INFO     | rag_engine | session=efec31fe-1ae1-4b6a-96ea-026322a9332c | [BENCHMARK] Total generate_reply turn took 3543.9 ms
+2026-08-07 11:08:06,984 | INFO     | __main__ | session=ingest | Starting knowledge base ingestion...
+2026-08-07 11:08:06,987 | INFO     | __main__ | session=ingest | Text split into 158 chunks
+2026-08-07 11:08:06,988 | INFO     | __main__ | session=ingest | Loading embedding model 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'...
+2026-08-07 11:08:23,802 | INFO     | __main__ | session=ingest | Encoding 158 chunks...
+2026-08-07 11:17:20,626 | INFO     | __main__ | session=ingest | Starting knowledge base ingestion...
+2026-08-07 11:17:20,629 | INFO     | __main__ | session=ingest | Text split into 158 chunks
+2026-08-07 11:17:20,630 | INFO     | __main__ | session=ingest | Loading embedding model 'sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2'...
+2026-08-07 11:17:35,637 | INFO     | __main__ | session=ingest | Encoding 158 chunks...
+2026-08-07 11:17:55,861 | INFO     | __main__ | session=ingest | Ingestion complete. Collection 'hyder_bikes_kb' now has 178 items.
+2026-08-07 11:28:47,085 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 118.2 ms
+2026-08-07 11:31:16,745 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Gemini API call took 149658.8 ms
+2026-08-07 11:31:16,747 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | Generated reply (lang=english, relevant_context=True, api_failure=False, handoff=False)
+2026-08-07 11:31:16,748 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Total generate_reply turn took 150606.7 ms
+2026-08-07 11:34:14,264 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Query rewrite took 127549.6 ms
+2026-08-07 11:34:14,348 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 4.3 ms
+2026-08-07 11:34:15,374 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Gemini API call took 1025.6 ms
+2026-08-07 11:34:15,375 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | Generated reply (lang=roman_urdu, relevant_context=True, api_failure=False, handoff=False)
+2026-08-07 11:34:15,375 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Total generate_reply turn took 128661.4 ms
+2026-08-07 11:37:32,571 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Query rewrite took 43963.1 ms
+2026-08-07 11:37:32,650 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 2.4 ms
+2026-08-07 11:37:33,614 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Gemini API call took 963.3 ms
+2026-08-07 11:37:33,615 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | Generated reply (lang=english, relevant_context=True, api_failure=False, handoff=True)
+2026-08-07 11:37:33,615 | INFO     | rag_engine | session=6ba274f9-35d6-4906-a618-40b8cfa6249e | [BENCHMARK] Total generate_reply turn took 45007.8 ms
+2026-08-20 16:47:54,528 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 307.9 ms
+2026-08-20 16:48:41,272 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | [BENCHMARK] Gemini API call took 46741.2 ms
+2026-08-20 16:48:41,283 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | Generated reply (lang=english, relevant_context=True, api_failure=False, handoff=False)
+2026-08-20 16:48:41,284 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | [BENCHMARK] Total generate_reply turn took 48292.8 ms
+2026-08-20 16:51:53,601 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | [BENCHMARK] Query rewrite took 169344.9 ms
+2026-08-20 16:51:53,721 | INFO     | rag_engine | session=- | [BENCHMARK] Vector DB query took 5.4 ms
+2026-08-20 16:52:20,585 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | [BENCHMARK] Gemini API call took 26862.9 ms
+2026-08-20 16:52:20,586 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | Generated reply (lang=urdu, relevant_context=True, api_failure=False, handoff=False)
+2026-08-20 16:52:20,586 | INFO     | rag_engine | session=a0e212fc-0887-4e6c-823f-cbde14f1ab4e | [BENCHMARK] Total generate_reply turn took 196330.2 ms

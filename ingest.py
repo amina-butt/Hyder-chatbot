@@ -74,11 +74,11 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
     return chunks
 
 
-def _chunk_id(chunk: str) -> str:
-    """Deterministic ID (content hash) so re-running ingestion updates
-    existing entries rather than duplicating them."""
-    return hashlib.sha256(chunk.encode("utf-8")).hexdigest()[:16]
-
+def _chunk_id(chunk: str, idx: int) -> str:
+    """Deterministic ID combining content hash and index so duplicate text
+    snippets still receive unique IDs in ChromaDB."""
+    content_hash = hashlib.sha256(chunk.encode("utf-8")).hexdigest()[:12]
+    return f"{content_hash}_{idx}"
 
 def build_vector_store(chunks: List[str]) -> None:
     """Embed chunks and upsert them into a persistent ChromaDB collection."""
@@ -97,8 +97,8 @@ def build_vector_store(chunks: List[str]) -> None:
         name=settings.CHROMA_COLLECTION_NAME,
         metadata={"hnsw:space": "cosine"},
     )
-
-    ids = [_chunk_id(c) for c in chunks]
+    ids = [_chunk_id(c, i) for i, c in enumerate(chunks)]
+    
     collection.upsert(
         ids=ids,
         documents=chunks,

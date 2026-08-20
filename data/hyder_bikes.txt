@@ -1,25 +1,346 @@
-Company Overview: Hyder Electric Bikes is a Pakistani electric two-wheeler company headquartered in Lahore, Punjab. Founded in 2021, Hyder designs and assembles electric bikes locally with a focus on affordable last-mile mobility for students, commuters, and small delivery businesses. Hyder currently manufactures three models: the ELI 100, the HLI 100, and the SLI 100.
+# Hyder Electric Bikes — Comprehensive Knowledge Base
 
-Model ELI 100 - Overview: The ELI 100 is Hyder's entry-level commuter electric bike, designed for daily city riding and college commutes. Motor: 1000W brushless hub motor. Battery: 48V 20Ah Lithium-ion (removable). Top speed: 55 km/h. Range per charge: 70-80 km in eco mode, 55-60 km in sport mode. Charging time: 4.5 hours from empty to full using the standard charger. Weight: 78 kg. Frame: reinforced steel frame rated for riders up to 110 kg. Brakes: front and rear disc brakes with combined braking system (CBS). Colors available: Matte Black, Pearl White, Racing Red. Warranty: 2 years on motor, 1 year on battery (or 500 charge cycles, whichever comes first).
+This document is the master knowledge base for Hyder Assistant, the AI customer support agent for Hyder Electric Bikes. It is written entirely in English (per the RAG architecture, retrieval always happens against English-language chunks regardless of the language the customer asks in) and is organized into a core reference section followed by ten detailed modules, each combining narrative explanation with realistic customer Q&A pairs.
 
-Model HLI 100 - Overview: The HLI 100 is Hyder's mid-range hybrid model, combining pedal-assist and full throttle modes, aimed at riders who want flexibility between exercise and pure electric commuting. Motor: 1200W brushless hub motor. Battery: 60V 22Ah Lithium-ion (removable, dual battery slot optional). Top speed: 65 km/h. Range per charge: 90-100 km in eco/pedal-assist mode, 65-70 km in full throttle mode. Charging time: 5 hours from empty to full. Weight: 85 kg. Frame: aluminum alloy frame rated for riders up to 120 kg. Brakes: hydraulic disc brakes front and rear. Colors available: Graphite Grey, Ocean Blue, Matte Black. Warranty: 2 years on motor, 18 months on battery (or 700 charge cycles, whichever comes first).
+## Company Overview
 
-Model SLI 100 - Overview: The SLI 100 is Hyder's premium long-range model, built for intercity travel and small delivery fleet operators who need extended range and higher payload capacity. Motor: 1500W brushless hub motor with regenerative braking. Battery: 60V 30Ah Lithium-ion (removable, dual battery slot standard). Top speed: 75 km/h. Range per charge: 120-130 km in eco mode, 90-100 km in sport mode. Charging time: 6 hours from empty to full, or 2.5 hours with the optional fast charger (sold separately). Weight: 95 kg. Frame: reinforced aluminum alloy frame rated for riders up to 130 kg, with rear rack capacity of 25 kg for delivery use. Brakes: hydraulic disc brakes front and rear with ABS. Colors available: Jet Black, Titanium Silver, Forest Green. Warranty: 3 years on motor, 2 years on battery (or 1000 charge cycles, whichever comes first).
+Hyder Electric Bikes was founded in 2021 and is headquartered in Lahore, Pakistan. The company designs, assembles, and sells electric motorbikes aimed at everyday commuters, students, small business owners, and delivery riders across Pakistan's major cities. Hyder Electric Bikes positions itself as a practical, lower-running-cost alternative to petrol motorbikes, with a particular focus on affordability, low maintenance, and suitability for Pakistan's climate and road conditions.
 
-Pricing (as of 2026, ex-showroom Lahore, prices in PKR, subject to change without notice): ELI 100 - PKR 285,000. HLI 100 - PKR 365,000. SLI 100 - PKR 465,000. Optional fast charger for SLI 100 - PKR 18,000. Optional second battery pack (HLI 100 / SLI 100) - PKR 55,000. A refundable booking deposit of PKR 15,000 is required to reserve any model; the balance is payable on delivery.
+**Head Office**: 2nd Floor, Al-Hafeez Tower, Gulberg III, Lahore.
 
-Showroom and Head Office Addresses (fictional/for testing purposes): Head Office - Hyder Electric Bikes, 2nd Floor, Al-Hafeez Tower, Gulberg III, Lahore, Punjab, Pakistan. Lahore Showroom - Shop 14, Model Town Link Road, Lahore. Karachi Showroom - Plot 22-C, Shahrah-e-Faisal, Karachi. Islamabad Showroom - Office 5, Blue Area, Jinnah Avenue, Islamabad. Showroom timings: Monday to Saturday, 11:00 AM to 8:00 PM. Closed on Sundays and public holidays.
+**Showrooms** (all open Monday–Saturday, 11:00 AM–8:00 PM, closed Sunday):
+- Lahore: Shop 14, Model Town Link Road.
+- Karachi: Plot 22-C, Shahrah-e-Faisal.
+- Islamabad: Office 5, Blue Area, Jinnah Avenue.
 
-Warranty and Service Policy: All Hyder bikes come with a standard manufacturer warranty covering manufacturing defects in the motor, controller, and frame, as described per-model above. The warranty does not cover damage from accidents, water damage beyond IP-rated limits, unauthorized modifications, or normal wear items such as tires, brake pads, and cables. Free service checkups are provided at 1 month, 3 months, and 6 months after delivery. After the free period, routine service is charged at PKR 1,500 per visit plus parts.
+**Service Centers**: Lahore, Karachi, Islamabad, and Faisalabad (Susan Road). Customers can bring their bike to any of these four service centers regardless of which city they purchased it in, since all service records are centrally logged against the bike's chassis number.
 
-Charging and Battery FAQ: Q: How long does a full charge take? A: Charging time varies by model - approximately 4.5 hours for the ELI 100, 5 hours for the HLI 100, and 6 hours for the SLI 100 (or 2.5 hours with the optional SLI 100 fast charger). Q: Can I charge the bike at a normal home socket? A: Yes, all Hyder chargers work with standard 220V household sockets in Pakistan. Q: How many charge cycles does the battery last? A: Batteries are rated for 500 to 1000 full charge cycles depending on the model, after which capacity typically degrades to about 80% of original range. Q: Can I remove the battery to charge it separately from the bike? A: Yes, all Hyder batteries are removable and can be charged indoors away from the bike.
+**Customer Support**: Phone and WhatsApp at 0309 9432 432, email at support@hyderbikes.pk, available Monday–Saturday, 9:00 AM–9:00 PM PST. Support can assist with booking questions, service scheduling, warranty claims, and general product questions in English, Urdu, or Roman Urdu.
 
-Test Ride and Booking FAQ: Q: How do I book a test ride? A: Test rides can be booked by visiting any Hyder showroom in person, or by calling our booking line. A valid CNIC and driving license (or learner's permit) are required for a test ride. Q: How long does delivery take after booking? A: Standard delivery time is 2 to 4 weeks after the booking deposit is paid, depending on model availability and city. Q: Can I customize the color of my bike? A: Yes, subject to color availability at the time of booking; custom colors outside the standard range are not currently offered.
+## Model Lineup & Full Specifications
 
-Payment and Financing FAQ: Q: What payment methods are accepted? A: Hyder accepts cash, bank transfer, and major debit/credit cards at all showrooms. Q: Is installment or financing available? A: Hyder offers an in-house 6-month and 12-month installment plan through partner banks for salaried customers, subject to approval and a processing fee. Exact monthly installment amounts depend on the bank's current markup rate at the time of application. Q: Is there a discount for students? A: Hyder periodically runs student discount campaigns during university admission seasons; students should check with their nearest showroom for current promotions.
+Hyder Electric Bikes currently manufactures three models, positioned as entry-level, mid-range hybrid, and premium/fleet respectively. All three use gearless, chainless hub-motor drivetrains with no clutch and no manual gear shifting — the rider simply twists the throttle to accelerate, similar in feel to a fully automatic scooter.
 
-Return and Refund Policy: Booking deposits are fully refundable if canceled within 7 days of booking, provided the bike has not yet been assigned a chassis number for delivery. After a bike has been delivered, returns are only accepted within 3 days if the bike has a manufacturing defect confirmed by an authorized Hyder technician; in that case, a replacement or full refund will be issued. Refunds typically take 10 to 15 business days to process back to the original payment method.
+### ELI 100 — Entry-Level Commuter
 
-Service Centers: Authorized Hyder service centers are located in Lahore (Model Town Link Road), Karachi (Shahrah-e-Faisal), Islamabad (Blue Area), and Faisalabad (Susan Road). Only these authorized centers should be used for warranty repairs; repairs done at unauthorized third-party shops may void the remaining warranty.
+The ELI 100 is Hyder's entry-level model, designed for students and first-time riders who want an affordable, low-maintenance daily commuter for city use.
 
-Contact and Human Support: For any questions not covered by this assistant, complaints, warranty claims, or to speak with a human representative, customers can reach Hyder Electric Bikes support directly at 0309 9432 432 (phone and WhatsApp) or via email at support@hyderbikes.pk. Support hours are Monday to Saturday, 9:00 AM to 9:00 PM Pakistan Standard Time.
+- Motor: 1000W Brushless Hub Motor (gearless, chainless).
+- Battery: 48V 20Ah Lithium-ion, removable.
+- Top Speed: 55 km/h.
+- Range: 70–80 km in Eco mode; 55–60 km in Sport mode.
+- Charge Time: 4.5 hours from empty to full using the standard charger.
+- Weight: 78 kg (unladen).
+- Max Load: 110 kg (combined rider + cargo).
+- Brakes: CBS (Combined Braking System) disc brakes, front and rear.
+- Available Colors: Matte Black, Pearl White, Racing Red.
+- Warranty: 2 years on the motor; 1 year or 500 charge cycles on the battery, whichever comes first.
+- Price: PKR 285,000.
+
+### HLI 100 — Mid-Range Hybrid Pedal-Assist
+
+The HLI 100 sits in the middle of the lineup and is a hybrid model, meaning it supports both pedal-assist riding (for extending range and light exercise) and full throttle-only riding like a standard scooter.
+
+- Motor: 1200W Hub Motor.
+- Battery: 60V 22Ah Lithium-ion, removable, with an optional dual-slot upgrade for a second battery.
+- Top Speed: 65 km/h.
+- Range: 90–100 km in pedal-assist/Eco mode; 65–70 km in pure throttle mode.
+- Charge Time: 5 hours from empty to full.
+- Weight: 85 kg (unladen).
+- Max Load: 120 kg.
+- Brakes: Hydraulic disc brakes, front and rear.
+- Available Colors: Graphite Grey, Ocean Blue, Matte Black.
+- Warranty: 2 years on the motor; 18 months or 700 charge cycles on the battery, whichever comes first.
+- Price: PKR 365,000.
+
+### SLI 100 — Premium Long-Range / Fleet Model
+
+The SLI 100 is Hyder's flagship model, aimed at riders who need the longest range, the highest load capacity, or who are running the bike commercially (for example, food delivery or courier work).
+
+- Motor: 1500W Hub Motor with regenerative braking (recovers energy while braking to extend range).
+- Battery: 60V 30Ah Lithium-ion, dual-slot standard (ships with two battery packs).
+- Top Speed: 75 km/h.
+- Range: 120–130 km in Eco mode; 90–100 km in Sport mode.
+- Charge Time: 6 hours with the standard charger; 2.5 hours with the optional fast charger.
+- Weight: 95 kg (unladen).
+- Max Load: 130 kg rider/cargo, plus a 25 kg rated rear rack for additional delivery cargo.
+- Brakes: Hydraulic disc brakes with ABS (Anti-lock Braking System), front and rear.
+- Available Colors: Jet Black, Titanium Silver, Forest Green.
+- Warranty: 3 years on the motor; 2 years or 1000 charge cycles on the battery, whichever comes first.
+- Price: PKR 465,000.
+
+### Accessories & Add-ons
+
+- Fast Charger for SLI 100: PKR 18,000. Reduces full charge time from 6 hours to 2.5 hours. Compatible only with the SLI 100's battery management system; not compatible with the ELI 100 or HLI 100.
+- 2nd Battery Pack: PKR 55,000. Available for all three models, though only the SLI 100 ships with dual-slot capability built in — ELI 100 and HLI 100 owners who buy a second pack would swap batteries rather than run both simultaneously, unless they have opted for the HLI 100's optional dual-slot upgrade.
+
+### Booking, Deposit & Delivery
+
+- A refundable deposit of PKR 15,000 is required to place a booking on any model.
+- Standard delivery time after booking is 2–4 weeks, depending on current production and color availability.
+- Customers may cancel a booking and receive a full deposit refund within 7 days of booking, provided a chassis number has not yet been assigned to their unit.
+- If a delivered bike is found to be defective, Hyder offers a 3-day replacement policy from the date of delivery.
+
+### Maintenance Schedule
+
+- Free service checkups are provided at 1 month, 3 months, and 6 months after delivery.
+- After the 6-month mark, each service visit costs PKR 1,500 plus the cost of any replacement parts used.
+
+---
+
+## Module 1: Absolute Beginner & Naive EV Questions
+
+Many Hyder customers are riding an electric two-wheeler for the very first time, often switching directly from a bicycle or from being a passenger on someone else's petrol bike, with no prior experience of any motorized vehicle. This module covers the most basic operational questions — how to actually start and ride the bike safely — in plain, non-technical language, since these customers may not know terms like "throttle" or "regenerative braking" yet.
+
+All three Hyder models (ELI 100, HLI 100, SLI 100) are fully automatic: there is no clutch lever, no gear shifter, and no kick-start or push-start procedure. The rider turns a key or uses the keyless remote to power on the bike, waits for the dashboard to light up, and then simply twists the throttle grip to move forward — much like riding a bicycle downhill, except the "downhill" feeling is produced by the electric motor instead of gravity.
+
+**Q: How do I turn on and start riding the bike? Is there a kick-start like a petrol bike?**
+A: There is no kick-start and no clutch. Turn the key (or press the keyless remote's power button) to switch the bike on, wait a moment for the dashboard display to light up and show a battery percentage, then simply twist the right-hand throttle grip to begin moving. Releasing the throttle causes the bike to coast and slow down gradually, just like letting off the pedals on a bicycle.
+
+**Q: Does the bike have gears I need to shift while riding?**
+A: No. All Hyder models use a gearless, chainless hub motor, meaning there is only one continuous speed range with no manual gear changes required at any point — you simply twist the throttle more for more speed and less for less speed.
+
+**Q: How do the brakes work — are they hand levers like a bicycle, or foot pedals like a car?**
+A: Braking is done with hand levers on the handlebars, exactly like a bicycle: the left lever operates the rear brake and the right lever operates the front brake. The ELI 100 uses CBS (Combined Braking System) disc brakes, which apply both front and rear brakes proportionally even if you only squeeze one lever, for more predictable stopping. The HLI 100 and SLI 100 use full hydraulic disc brakes for stronger, more responsive stopping power, and the SLI 100 additionally has ABS to prevent wheel lock-up during hard braking.
+
+**Q: What happens if I twist the throttle while I'm squeezing the brake lever?**
+A: All Hyder models have a safety kill-switch built into the brake levers: as soon as either brake lever is squeezed, power to the motor is automatically cut off regardless of throttle position, so the bike cannot accelerate while braking. This is a standard EV safety feature and works even if you accidentally twist the throttle while holding the brake at a red light.
+
+**Q: Can I get an electric shock from touching the bike, the charging port, or the battery terminals?**
+A: Under normal use, no. The battery, wiring, and charging port are sealed and insulated to a safety standard suitable for everyday handling, including removing and inserting the battery pack yourself. The only situation where there is a genuine shock risk is if the battery casing is physically cracked or damaged, or if you attempt to open the battery pack yourself — in either case, stop using the bike immediately and bring it to a Hyder service center rather than inspecting it yourself.
+
+**Q: Is there engine oil or mobil oil that needs to be changed, like a petrol bike?**
+A: No. Hyder bikes use a gearless electric hub motor, not a petrol combustion engine, so there is no engine oil, no oil filter, and no oil changes required at any point in the bike's life. The only fluid-related maintenance is hydraulic brake fluid on the HLI 100 and SLI 100, which is checked during scheduled service visits rather than changed on a routine basis.
+
+**Q: The bike is very quiet — how do I ride safely around pedestrians who can't hear me coming?**
+A: Because electric motors produce very little noise compared to a petrol engine, it's good practice to make more deliberate use of the horn when approaching blind corners, pedestrians who haven't noticed you, or crowded market streets, and to keep headlights on at all times (not just at night) so you're visually noticeable even when you can't be heard. This is simply a matter of adjusted riding habit rather than any additional safety accessory.
+
+**Q: Is riding an electric bike difficult to learn if I've only ridden a bicycle before?**
+A: Most new riders find electric bikes easier to learn than a petrol motorbike, precisely because there's no clutch coordination or gear-shifting to practice — the main new skill is throttle control (learning to twist smoothly rather than jerkily) and getting used to slightly higher speeds than a bicycle. We recommend practicing in an empty parking area or quiet street for 15–20 minutes before riding in traffic.
+
+---
+
+## Module 2: Weather, Monsoon, Waterlogging & Washing
+
+Pakistan's climate presents two recurring concerns for electric bike owners: monsoon flooding in cities like Lahore and Karachi during the rainy season, and extreme summer heat that can exceed 45°C in Punjab and Sindh. This module addresses both, along with routine washing questions.
+
+All Hyder models carry an IP65 rating on the motor and battery compartment, meaning they are protected against low-pressure water jets from any direction and are safe to ride in normal rain and light waterlogging. However, IP65 is not the same as being fully submersible, and there is a specific safe wading depth that should not be exceeded.
+
+**Q: Can I ride the bike in the rain?**
+A: Yes. All Hyder models are IP65-rated on the motor and battery compartment, which means they are designed to handle normal monsoon rainfall and riding through light standing water without issue.
+
+**Q: How deep can standing/flood water be before it's unsafe to ride through?**
+A: As a safe general guideline, water should not rise above the center of the wheel hub (roughly ankle-to-lower-shin height). Riding through deeper standing water risks water entering the motor housing or battery compartment despite the IP65 seal, since that rating is tested for splash and jet exposure, not sustained submersion.
+
+**Q: What should I do if water accidentally enters the wheel area or battery compartment?**
+A: Stop riding immediately, power off the bike, and do not attempt to charge the battery. Remove the battery pack if it is the removable type and dry the compartment and terminals with a clean, dry cloth, then bring the bike to the nearest Hyder service center for inspection before riding or charging again — riding on a wet motor or charging a wet battery risks permanent damage that would not be covered under warranty if caused by submersion beyond the IP65 rating.
+
+**Q: Can I wash the bike with a pressure washer at a service station, the way people wash petrol bikes?**
+A: We recommend against direct high-pressure spraying at the battery compartment, motor hub, charging port, and dashboard/display unit, since a pressure washer's jet exceeds the force the IP65 rating is tested against. It's fine to pressure-wash the frame, wheels (away from the hub), and body panels; for the sensitive areas, use a damp cloth or a gentle hose-level spray only, with the battery removed if possible.
+
+**Q: How does the bike handle extreme summer heat, like 45°C+ days in Lahore or Multan?**
+A: The battery management system (BMS) automatically monitors battery temperature and will reduce charging speed or output power if the battery gets too hot, as a protective measure — this is normal behavior, not a fault. To get the best performance and battery lifespan in extreme heat, park in shade when possible, avoid leaving the bike in direct sun for extended periods during the hottest part of the day, and avoid charging immediately after a long ride in very hot weather; let the battery cool for 20–30 minutes first.
+
+**Q: Does hot weather reduce the bike's range?**
+A: Very high heat can cause a modest reduction in range compared to the manufacturer's stated figures, similar to how extreme cold also reduces range — this is a characteristic of lithium-ion batteries generally, not a defect specific to Hyder bikes. Riding in more moderate temperatures (below roughly 35°C) typically produces range closer to the advertised figures.
+
+---
+
+## Module 3: Electricity, Solar, UPS, Generators & Charging Math
+
+This module covers exactly how much a full charge costs in electricity, and the different power sources customers might use to charge — standard home sockets, solar inverters, home UPS systems, and generators — since charging cost and convenience are major decision factors for buyers comparing electric to petrol.
+
+**Q: How many units (kWh) of electricity does a full charge use for each model?**
+A: The ELI 100's 48V 20Ah battery holds approximately 0.96 kWh, so a full charge from empty uses roughly 1 unit of electricity (accounting for minor charging losses, closer to 1.1 units). The HLI 100's 60V 22Ah battery holds approximately 1.32 kWh, using roughly 1.4–1.5 units per full charge. The SLI 100's 60V 30Ah battery holds approximately 1.8 kWh per pack (3.6 kWh total across both packs), using roughly 2 units per single-pack charge or around 4 units to charge both packs fully.
+
+**Q: What would a full charge cost in rupees on a typical Pakistani residential electricity bill?**
+A: Using a residential slab rate in the general range of PKR 35–55 per unit (this varies by province, monthly consumption slab, and current tariff), a full ELI 100 charge (about 1.1 units) costs roughly PKR 40–60; a full HLI 100 charge (about 1.4 units) costs roughly PKR 50–75; and a full single-pack SLI 100 charge (about 2 units) costs roughly PKR 70–110. Actual cost depends on which consumption slab your household bill falls into that month, since Pakistani residential tariffs are tiered.
+
+**Q: If I ride the ELI 100 daily and charge it every day, roughly how much extra will it add to my monthly electricity bill?**
+A: At roughly PKR 40–60 per full charge and one charge per day, a month of daily charging adds approximately PKR 1,200–1,800 to the household electricity bill — though many riders don't need a full charge every single day depending on their daily distance, which would bring this figure down further.
+
+**Q: Can I charge the bike using a normal home wall socket?**
+A: Yes. All Hyder chargers are designed to work with standard Pakistani residential 220V 2-pin or 3-pin wall sockets — no special industrial socket or wiring is required.
+
+**Q: Can I charge the bike from a solar power setup?**
+A: Yes, provided your solar inverter can supply stable 220V AC output at the charger's power draw (the standard charger draws under 500W, well within the capacity of most residential solar inverter setups). Charging directly during daylight hours when solar generation is active is an effective way to reduce the net electricity cost of charging to close to zero.
+
+**Q: Can I charge the bike from a home UPS during load-shedding?**
+A: Yes, but only from a Pure Sine Wave UPS — a Modified Sine Wave UPS can supply an unstable waveform that may cause charging errors or, in rare cases, stress on the charger's internal components over repeated use. Most modern UPS units sold for home appliance backup in Pakistan are pure sine wave, but it's worth checking your specific UPS's specification sheet before relying on it for regular bike charging.
+
+**Q: Can I charge the bike from a petrol/diesel generator?**
+A: Yes, as long as the generator produces stable 220V AC output — most standard household generators are suitable. As with a UPS, an inverter-type generator (which produces a cleaner, more stable waveform) is preferable to a very old or poorly maintained generator with fluctuating output.
+
+**Q: Is it safe to leave the bike charging overnight?**
+A: Yes. The charger and the battery's internal Battery Management System (BMS) automatically detect when the battery reaches full charge and cut off power delivery, preventing overcharging even if the charger is left plugged in for several hours after the battery is already full. As a general fire-safety best practice for any electrical appliance, we still recommend charging on a hard, non-flammable surface and not directly on bedding or carpet.
+
+**Q: I live in an apartment with no ground-floor parking or charging point near the bike. Can I take the battery upstairs to charge it?**
+A: Yes — the batteries on all three models are designed to be removable specifically for this reason. You can detach the battery pack from the bike, carry it to any indoor socket (in your apartment, office, or shop), charge it there using the same standard charger, and then reinstall it on the bike once full.
+
+---
+
+## Module 4: Battery Care, Life Expectancy & Replacement
+
+The battery is the single most important — and most expensive — component on any electric bike, so customers frequently ask about how long it will last, how to care for it, and what happens as it ages. This module explains charge cycles, degradation, and replacement in plain terms.
+
+**Q: What exactly is a "charge cycle," and how is battery health measured?**
+A: One charge cycle is equal to using a total of 100% of the battery's capacity, whether that happens in one full charge from 0–100%, or spread across several partial charges that add up to 100% (for example, four separate charges from 75% to 100% would together count as one cycle). Battery health is measured as a percentage of the battery's original maximum capacity — a battery rated for 500 cycles is expected to retain a substantial majority of its original range and performance up through that cycle count.
+
+**Q: How many years will the battery realistically last before it needs replacing?**
+A: Based on the rated cycle counts (500 cycles for the ELI 100, 700 for the HLI 100, 1000 for the SLI 100) and typical usage of roughly one charge per day, most owners can expect their original battery to remain usable for approximately 1.5 to 3 years before range noticeably drops enough that replacement becomes worthwhile, with lighter daily usage (partial charges rather than full 0–100% cycles) extending this further.
+
+**Q: What happens when the battery degrades to around 80% of its original capacity — does it stop working completely?**
+A: No, the bike does not stop working. Battery degradation is gradual: at 80% remaining capacity, you'll notice the range has reduced by roughly the same proportion (for example, an ELI 100 originally getting 75 km in Eco mode might now get closer to 60 km), but the battery continues to function normally for charging and riding. Most riders continue using a battery well past the 80% mark until the reduced range becomes genuinely inconvenient for their daily distance.
+
+**Q: How much does a replacement battery cost, and is there a trade-in or recycling program?**
+A: A replacement second/spare battery pack (compatible across all three models' respective voltage classes) costs PKR 55,000. Hyder service centers accept old battery packs for responsible recycling when a customer purchases a replacement, in line with environmental disposal practices for lithium-ion batteries — customers should never dispose of an old battery pack in regular household trash.
+
+**Q: If I'm going out of town for one or two months, how should I store the bike and battery?**
+A: Store the battery at approximately 50–70% charge rather than fully charged or fully empty, since storing a lithium-ion battery at either extreme for extended periods accelerates degradation. If possible, remove the battery from the bike and store it in a cool, dry indoor location, and check/top up the charge roughly once a month if the absence extends beyond two months.
+
+**Q: Does extreme summer heat or winter cold in Pakistan permanently damage the battery?**
+A: Occasional exposure to Pakistan's seasonal temperature extremes (very hot summers, cool winter nights in northern regions) will not cause permanent damage on its own, since the BMS actively protects the battery by limiting charge/discharge rates in extreme conditions. Chronic, repeated exposure — such as always parking in direct sun through the hottest summer months for years — can contribute to somewhat faster long-term degradation, which is why shaded parking and avoiding immediate post-ride charging in extreme heat are recommended as good habits rather than strict requirements.
+
+---
+
+## Module 5: Range, Speed, Slopes & Load Capacity
+
+Advertised range and speed figures are tested under specific conditions, and real-world results vary based on rider weight, terrain, riding mode, and load. This module explains those factors along with passenger and cargo capacity questions.
+
+**Q: Why is my real-world range lower than the advertised range figures?**
+A: Advertised range figures (for example, 70–80 km Eco mode on the ELI 100) are measured under standard test conditions: a rider of average weight, correctly inflated tires, flat terrain, and no significant headwind. Real-world range is reduced by a heavier rider or passenger, low tire pressure, riding into strong headwinds, frequent hard acceleration, and use of Sport mode instead of Eco mode — any combination of these factors can reduce range by 15–30% below the advertised figure.
+
+**Q: What's the difference between Eco mode and Sport mode?**
+A: Eco mode limits maximum power delivery and throttle response to maximize range and is best for steady city commuting, while Sport mode unlocks the motor's full power and quicker throttle response for faster acceleration and higher top speed, at the cost of noticeably reduced range per charge.
+
+**Q: How does the bike perform going uphill, like on flyovers or in hilly areas such as Murree?**
+A: The ELI 100's 1000W motor can comfortably handle city flyovers and gentle inclines with a single rider, though sustained steep climbs will reduce range and top speed somewhat. The HLI 100's 1200W motor and especially the SLI 100's 1500W motor handle steep or sustained inclines — including the kind of terrain found in northern hill stations like Murree — noticeably better, making the SLI 100 the recommended choice for riders who regularly travel through hilly terrain.
+
+**Q: Kiya 3 log baith saktay hain ek bike pe? (Can 3 people ride on one bike?)**
+A: No — Hyder bikes are designed and rated for a maximum of two people (one rider, one pillion passenger), and even that is subject to the model's total max load rating (110 kg for the ELI 100, 120 kg for the HLI 100, 130 kg for the SLI 100, combined rider plus passenger plus any cargo). Carrying three people significantly exceeds safe handling and braking performance and is not recommended under any circumstances.
+
+**Q: What happens if I overload the bike beyond its rated max load?**
+A: Overloading beyond the rated max load capacity increases stopping distance, reduces stability (especially when cornering or braking), accelerates wear on the motor, suspension, and tires, and can reduce range significantly — in more severe or repeated cases, it can also void warranty coverage on drivetrain and suspension components if the overload is judged to be the cause of a failure.
+
+**Q: Is the SLI 100 suitable for commercial delivery work, like Foodpanda or Bykea?**
+A: Yes — the SLI 100 is specifically positioned as Hyder's fleet/commercial model, with its 25 kg-rated rear rack, higher 130 kg max load capacity, dual battery packs for extended daily range, and regenerative braking well suited to the stop-start riding pattern typical of food delivery and courier work. A number of existing Hyder customers use the SLI 100 for exactly this purpose.
+
+---
+
+## Module 6: Petrol vs. Electric Financial Comparison
+
+Cost comparison against a petrol motorbike is one of the most common questions from prospective buyers deciding whether to switch. This module walks through the math for fuel and maintenance savings.
+
+**Q: How does the running cost of a Hyder ELI 100 compare to a typical 70cc or 125cc petrol bike, for someone riding about 1,000 km per month?**
+A: A typical 70cc petrol bike averages roughly 45–55 km per liter, so 1,000 km would require approximately 18–22 liters of petrol per month; a 125cc bike averages roughly 35–40 km per liter, requiring approximately 25–29 liters per month. At recent petrol prices in the general range of PKR 270–290 per liter, this works out to a fuel cost of roughly PKR 5,000–6,300 per month for a 70cc bike, or roughly PKR 7,000–8,400 per month for a 125cc bike. By comparison, charging an ELI 100 for the same 1,000 km (roughly 13 full charges, since the bike gets 70–80 km per charge in Eco mode) costs approximately PKR 520–780 per month in electricity — a saving of roughly PKR 4,500–7,600 per month depending on which petrol bike it's being compared against.
+
+**Q: How many months does it take for the bike to "pay for itself" compared to a petrol bike, just from fuel savings?**
+A: Using the ELI 100's price of PKR 285,000 and an estimated average fuel saving of roughly PKR 5,000–7,000 per month versus a typical petrol commuter bike, the price difference (after accounting for what a comparable petrol bike would have cost, roughly PKR 180,000–230,000 for a new 70cc–125cc bike) is typically recovered in fuel savings alone within approximately 2.5 to 4 years of consistent riding at 1,000 km/month — and faster for riders who cover more distance monthly, since higher usage increases the monthly fuel saving proportionally.
+
+**Q: What other maintenance costs does an electric bike save compared to petrol, beyond fuel?**
+A: Electric bikes eliminate several recurring petrol-bike maintenance costs entirely: no engine oil changes (typically every 1,000–1,500 km on a petrol bike, costing PKR 800–1,500 per change including labor), no spark plug replacement, no air filter replacement or cleaning, no carburetor tuning or fuel injector servicing, and no clutch plate wear/replacement since there is no clutch. Combined, these petrol-specific maintenance costs commonly add up to several thousand rupees per year that a Hyder owner simply does not incur.
+
+---
+
+## Module 7: Legal, Excise Registration, Traffic Police & Security
+
+This module covers the legal and regulatory questions specific to riding an electric two-wheeler in Pakistan, along with the bike's built-in anti-theft security features.
+
+**Q: Do I need a driving license to ride a Hyder electric bike?**
+A: Licensing requirements for electric two-wheelers depend on the motor power and top speed classification under each province's motor vehicle rules, and these classifications are periodically updated by provincial Excise & Taxation authorities. Because requirements can differ between Punjab, Sindh, and the Islamabad Capital Territory and can change over time, we advise every customer to confirm the current licensing requirement for their specific city with their local Excise & Taxation office at the time of purchase, rather than relying on a fixed answer.
+
+**Q: Does the bike need to be registered with the Excise & Taxation Department?**
+A: As with licensing, registration requirements for electric bikes vary by province and are subject to periodic policy updates from the Excise & Taxation Department in Punjab, Sindh, and the ICT administration in Islamabad. Hyder provides the necessary sale receipt, invoice, and chassis/motor documentation needed to support registration, and our showroom staff can guide customers through the current process for their specific city at the time of purchase.
+
+**Q: Do I need to wear a helmet while riding, and do I need to carry my CNIC?**
+A: Yes — standard traffic police rules requiring helmet use for the rider (and, in most jurisdictions, the pillion passenger) apply equally to electric bikes as to petrol bikes, since these rules are based on general road safety requirements rather than engine type. Riders should also carry their CNIC and any applicable vehicle documents while riding, as is standard practice for any registered vehicle on Pakistani roads.
+
+**Q: What anti-theft features does the bike have?**
+A: All Hyder models include a handlebar lock (mechanically locks the steering when parked), a keyless remote start system, a motion sensor alarm that triggers if the bike is moved or tampered with while armed, and a rear wheel lock mechanism that physically prevents the wheel from turning when engaged. Together these provide layered security beyond what a typical petrol bike's simple key-and-steering-lock offers.
+
+**Q: What should I do if I lose my keyless remote/key fob?**
+A: Contact Hyder support at 0309 9432 432 or visit any service center with your proof of ownership (sale invoice or registration documents); a replacement key fob can be programmed to your specific bike's security system. In the meantime, avoid leaving the bike unattended in unsecured locations, since a lost fob does not by itself disable the bike's other security features like the handlebar lock.
+
+---
+
+## Module 8: Maintenance, Tires, Brakes & Spare Parts
+
+Beyond the battery, customers regularly ask about brakes, tires, and general spare parts availability. This module also covers what actions can void the warranty.
+
+**Q: How often do the brakes need maintenance, and is there hydraulic fluid to change?**
+A: The HLI 100 and SLI 100 use hydraulic disc brakes, which should have their brake fluid checked at each scheduled service visit (1, 3, and 6 months, then during subsequent paid visits) and topped up or replaced if it shows signs of contamination or reduced level — this is checked as part of routine service rather than needing a fixed independent replacement schedule. Disc brake pads on all three models typically need replacement every 3,000–5,000 km depending on riding style and terrain, and service center staff will inspect pad wear at every visit and recommend replacement when needed.
+
+**Q: What kind of tires does the bike use — tubed or tubeless?**
+A: All Hyder models use tubeless tires, which are more resistant to sudden deflation from small punctures (a nail or sharp object often causes a slow leak rather than an instant flat) and can typically be repaired with a standard tubeless puncture repair kit at most roadside tire shops, the same as a car's tubeless tire.
+
+**Q: What tire pressure should I maintain, front and rear?**
+A: Recommended tire pressure is printed on the frame near each wheel and in the owner's manual provided at delivery; as a general guideline across the lineup, front tires typically run slightly lower pressure than rear tires since the rear carries more load. We recommend checking pressure at least once every two weeks and always before longer rides, since underinflated tires reduce both range and handling stability.
+
+**Q: Where can I buy spare parts like mirrors, brake levers, headlights, or indicators?**
+A: Genuine spare parts for all common wear-and-tear and accident-replacement items (mirrors, brake levers, headlight/taillight units, indicators, fairing panels) are stocked at all four Hyder service centers (Lahore, Karachi, Islamabad, Faisalabad) and can also be ordered through customer support for pickup or delivery if a specific part isn't in stock at your local center.
+
+**Q: What actions can void my warranty?**
+A: Warranty coverage is voided by: unauthorized modifications to the bike's wiring, motor controller, or battery management system; submerging the bike or battery in water beyond the rated IP65 splash/jet protection (for example, deep flood water or intentional submersion); having repairs or part replacements performed by a third-party mechanic not authorized by Hyder, where that repair is the cause of subsequent failure; and physical damage from accidents, overloading beyond rated max load, or off-road/stunt use the bike was not designed for. Normal wear items like brake pads and tires are not covered under warranty in any case, as is standard across the industry.
+
+---
+
+## Module 9: Purchasing, Installments, Student Discounts & Delivery
+
+This module walks through the end-to-end purchasing process, from initial booking through financing options and the return/cancellation policy.
+
+**Q: What is the step-by-step process to book a bike?**
+A: Visit any Hyder showroom (Lahore, Karachi, or Islamabad) or contact support to start a booking, select your model and color, pay the refundable PKR 15,000 booking deposit, and receive a booking confirmation with an estimated delivery window of 2–4 weeks. A chassis number is assigned to your specific unit once it enters the final production/allocation queue, after which the booking becomes locked in for that delivery batch.
+
+**Q: What payment methods are accepted for the deposit and remaining balance?**
+A: Hyder accepts cash, debit/credit card payment, and bank transfer for both the initial booking deposit and the remaining balance due at delivery.
+
+**Q: Are bank installment plans available?**
+A: Yes, Hyder has partnerships with select banks offering 6-month and 12-month installment tenures for qualifying customers. Salaried applicants typically need to provide a salary slip or employment letter and bank statements, while business owners typically need to provide business registration documents and bank statements; exact documentation requirements can vary slightly by partner bank, so we recommend confirming the current list of requirements with showroom staff or customer support at the time of application, since bank financing terms are periodically updated by the partner banks themselves.
+
+**Q: Is there a student discount available?**
+A: Yes, Hyder offers a student discount for customers who can present a valid university or college student ID at the time of purchase for verification. Showroom staff can confirm the current discount percentage and any applicable terms at the time of your visit, since promotional discount levels are reviewed periodically.
+
+**Q: What is the cancellation and refund policy if I change my mind after booking?**
+A: If you cancel within 7 days of booking and a chassis number has not yet been assigned to your specific unit, you receive a full refund of your PKR 15,000 deposit. Once a chassis number has been assigned, the booking is considered locked into that production/delivery batch, so cancellation policies at that stage should be confirmed directly with support based on your specific booking status.
+
+**Q: What if my bike arrives with a defect?**
+A: Hyder offers a 3-day replacement policy from the date of delivery: if a genuine manufacturing defect is identified within 3 days of receiving the bike, Hyder will replace the unit rather than simply repairing it. Report any suspected defect to support or your delivering showroom immediately upon discovery to stay within this window.
+
+---
+
+## Module 10: Conversational, Edge Case & "Silly" Customer Questions
+
+Real customer support conversations frequently include informal, half-serious, or genuinely uncertain questions that don't fit neatly into technical categories. This module addresses those directly and respectfully, since dismissing an odd-sounding question tends to frustrate customers more than simply answering it.
+
+**Q: Can I charge my bike's battery using a mobile phone power bank?**
+A: No — a standard mobile power bank outputs far too little power (typically 5–20W) compared to what the Hyder charger delivers (several hundred watts), so it would not meaningfully charge the bike's battery and is not a supported charging method. Always use the official Hyder charger that came with your bike, or an authorized replacement from a Hyder service center.
+
+**Q: Can I use the bike's battery to jump-start a petrol car?**
+A: No, this is not a supported or safe use of the battery. The bike's battery pack, voltage, and connector design are specifically engineered for the bike's own motor and electronics, not for a car's 12V starting system, and attempting to connect it to a car battery risks damaging both the bike's battery and the vehicle, in addition to being unsafe.
+
+**Q: What happens if the battery runs out completely while I'm out on the road, far from home?**
+A: On the HLI 100, which supports pedal-assist, you can pedal the bike manually to reach your destination or a charging point, similar to riding a heavy bicycle. On the ELI 100 and SLI 100, which do not have pedals, a fully depleted battery means the bike cannot move under its own power; in that situation, contact Hyder support at 0309 9432 432 for roadside guidance, or arrange transport (such as a pickup truck or trailer) to the nearest charging point or service center. To avoid this situation, it's good practice to start longer rides with a full charge and keep an eye on the battery percentage on the dashboard, especially before trips that exceed your usual daily distance.
+
+**Q: Can I modify the motor or controller to make the bike go faster than its rated top speed, like 100 km/h?**
+A: We strongly advise against this. Each model's motor, battery, brakes, and frame are engineered as a matched system around its rated top speed; forcing higher speeds through unauthorized modification exceeds what the brakes and frame were designed to handle safely, voids the warranty entirely, and creates a genuine safety risk to the rider and others on the road. If you need higher top speed for your use case, the better path is choosing a higher model in the lineup (for example, the SLI 100's 75 km/h rating instead of the ELI 100's 55 km/h) rather than modifying a lower model beyond its design limits.
+
+**Q: Why does the battery percentage show 100% but then drop quickly as soon as I accelerate hard?**
+A: This is a normal phenomenon called voltage sag: under a sudden heavy electrical load (hard acceleration), a lithium-ion battery's voltage temporarily dips, which can cause the displayed percentage to drop faster than the actual remaining energy would suggest, before recovering somewhat once the load eases off. It becomes more noticeable as a battery ages, but a small amount of voltage sag under hard acceleration is expected behavior on a healthy battery, not a fault.
+
+**Q: Is it normal for the bike to make a slight whining or humming sound while riding?**
+A: Yes, a soft, high-pitched whine or hum from the hub motor is normal and is simply the sound of the motor's internal windings operating — it's generally much quieter than a petrol engine and is not a sign of a problem. If the sound becomes noticeably louder, grinding, or is accompanied by vibration, that would be worth having checked at a service center, but the baseline soft motor whine on its own is expected.
+
+**Q: Can I ride the bike without the key/remote nearby, if I just leave it turned on?**
+A: The bike requires the key or keyless remote to be within range to power on and to disarm the security alarm system; it isn't designed to be left running continuously without the key present, both for security reasons and because the ignition system is built around requiring key/remote authentication to activate the motor controller.
+
+**Q: Does the bike come with any kind of mobile app to track battery level, location, or riding stats?**
+A: Current Hyder models display battery percentage, speed, and basic trip information directly on the built-in dashboard unit; companion mobile app availability and features are best confirmed with your showroom or customer support at the time of purchase, since this is an area of the product that may be expanded over time.
+
+**Q: If I buy the ELI 100 now, can I upgrade to the HLI 100 or SLI 100 later by paying the price difference?**
+A: Hyder does not offer a direct model-upgrade/trade-in program between the ELI 100, HLI 100, and SLI 100 at this time, since each model uses a different battery voltage class and motor, meaning an "upgrade" would effectively require replacing nearly the entire drivetrain rather than a simple part swap. Customers wanting a higher model would need to purchase it separately; support can advise on the current resale/trade-in options for your existing bike, if any are available at the time.
+
+---
+
+## Document Notes for Retrieval System
+
+This knowledge base is intended to be chunked and embedded for retrieval-augmented generation. Each Q&A pair above is written to be reasonably self-contained (naming the relevant model explicitly where applicable) so that a single retrieved chunk can meaningfully answer a user's question even without surrounding context. Core factual data (prices, specs, contact details, addresses) is repeated at the point of first full definition in the Model Lineup & Full Specifications section and should be treated as the single source of truth if any other section appears to reference it informally.

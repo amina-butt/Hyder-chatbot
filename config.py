@@ -21,16 +21,26 @@ class Settings(BaseSettings):
 
     # --- Google Gemini (google-genai SDK) ---
     GEMINI_API_KEY: str
-    GEMINI_MODEL: str = "gemini-3.6-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_TEMPERATURE: float = 0.3
-    GEMINI_MAX_OUTPUT_TOKENS: int = 1024
+    # Urdu script (and to a lesser extent Roman Urdu) tokenizes less
+    # efficiently than English under most tokenizers — the same sentence
+    # can cost noticeably more tokens. 2048 was still occasionally tight
+    # for longer Urdu answers, so this gives real headroom.
+    GEMINI_MAX_OUTPUT_TOKENS: int = 4096
 
     # --- Vector store (ChromaDB) ---
     CHROMA_DB_PATH: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "hyder_bikes_kb"
 
     # --- Embeddings ---
-    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
+    # NOTE: this model must produce the same embedding dimensionality as
+    # whatever is already stored in CHROMA_DB_PATH. If you change this after
+    # ingesting data, delete the CHROMA_DB_PATH directory and re-run
+    # ingest.py — mixing embeddings from two different models in one
+    # collection silently produces meaningless similarity scores, even if
+    # the vector dimensions happen to match.
+    EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     # --- Knowledge base ingestion ---
     DATA_FILE_PATH: str = "data/hyder_bikes.txt"

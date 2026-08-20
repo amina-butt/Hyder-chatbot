@@ -16,7 +16,7 @@ else:
     try:
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-3.6-flash",
+            model="gemini-2.5-flash",
             contents="Say hello!",
         )
         print("\n✅ API KEY WORKS GREAT!")
