@@ -159,6 +159,25 @@ class RetrievedChunk:
 # construct an answer from weakly-related context.
 _RELEVANCE_DISTANCE_THRESHOLD = 0.65
 
+# When the user is asking about all three bikes at once (or explicitly
+# wants a comparison), a single-model top_k isn't enough — we need chunks
+# spanning ELI 100, HLI 100, and SLI 100 in the same payload. This is a
+# lightweight keyword check (kept in English/Roman Urdu/Urdu script) used
+# to bump retrieval depth for that one query, without touching the normal
+# per-model default the rest of the time.
+_MULTI_MODEL_HINTS = {
+    "all", "all bikes", "all models", "every model", "every bike",
+    "compare", "comparison", "vs", "versus", "difference between",
+    "sab", "sabhi", "har model", "har bike", "tamam",
+    "موازنہ", "تمام", "ہر ماڈل", "سب",
+}
+_MULTI_MODEL_TOP_K = 9
+
+
+def _is_multi_model_query(query: str) -> bool:
+    lowered = query.lower()
+    return any(hint in lowered for hint in _MULTI_MODEL_HINTS)
+
 
 def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
     """Query ChromaDB for the most relevant knowledge-base chunks."""
@@ -496,6 +515,20 @@ CRITICAL ROLE RULE:
   question — this is a chat interface and Urdu-script answers already take up more
   space per idea than English, so favor brevity over exhaustiveness.
 
+HANDLING MULTI-MODEL / "ALL BIKES" / COMPARISON QUESTIONS (do this BEFORE considering
+any clarification below):
+- If the user asks about specs, prices, features, or details for ALL bike models, "all
+  bikes", "har model", "sab models", or explicitly asks for a comparison between models,
+  do NOT ask which specific model they mean. Instead, directly provide a complete
+  overview covering ELI 100, HLI 100, and SLI 100 together, using whatever details for
+  each are present in the context below. Organize the answer per-model (e.g., a short
+  heading or bold label per bike, or one short paragraph/list item per bike) so the
+  three are easy to tell apart.
+- If the context below is missing details for one of the three models, briefly note
+  that for that one model only, and still answer fully for the models you do have
+  context for — do not fall back to a clarifying question just because one model's
+  info is incomplete.
+
 HANDLING UNKNOWN/MISSING MODELS (e.g., user asks for HLI 888, but context only has HLI 100):
 1. Politely ask if they meant the nearest available model (e.g., "Did you mean HLI 100?" / "Kiya aap HLI 100 ke baare mein pooch rahe hain?").
 2. Clarify that if they strictly meant the asked model, details are not available in our database.
@@ -505,11 +538,14 @@ If the context below simply does not answer the user's question at all (and it i
 missing-model case above), say so plainly and give the same human support contact:
 {settings.HUMAN_HANDOFF_CONTACT}. Never guess or invent specs, prices, or policies.
 
-If the context below does not contain SPECIFIC model information relevant to what the
-user is asking (e.g. they asked a vague follow-up like "tell me more" or "aur bhi
-batao" and the retrieved context doesn't clearly cover it), do NOT start writing a
-numbered list or any structured answer. Instead, politely ask the user, in their own
-language, to specify which model or topic they'd like more details on.
+CLARIFICATION — ONLY for genuinely vague queries: if the user's message does not name
+any specific model AND does not ask about "all"/"every" model or a comparison (e.g. a
+bare "what is the price?" or a vague follow-up like "tell me more" / "aur bhi batao"
+with no clear subject, and the retrieved context doesn't clearly cover it), do NOT
+start writing a numbered list or any structured answer. Instead, politely ask the user,
+in their own language, to specify which model or topic they'd like more details on. Do
+NOT apply this clarification path to multi-model or comparison questions — those are
+handled above.
 
 Context provided from knowledge base:
 {context_block}
@@ -605,7 +641,8 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
-    chunks = retrieve_context(retrieval_query)
+    retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(retrieval_query) else None
+    chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
     relevant = _has_relevant_context(chunks)
 
     context_block = (
