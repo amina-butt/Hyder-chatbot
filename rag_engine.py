@@ -652,11 +652,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
-    retrieval_top_k = (
-    _MULTI_MODEL_TOP_K
-    if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query)
-    else None
-)
+    retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) else None
     chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
     relevant = _has_relevant_context(chunks)
 
@@ -729,23 +725,24 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         api_failure = True
         relevant = False
 
-        handoff_triggered = (
+    handoff_triggered = (
         api_failure or (not relevant) or (settings.HUMAN_HANDOFF_CONTACT in reply_text)
     )
-
-    # Deterministic contact-line injection — never rely on the LLM to decide
-    # this on its own. The `not in reply_text` guard prevents a duplicate in
-    # the api_failure branch above, which already writes its own contact line.
     if handoff_triggered and settings.HUMAN_HANDOFF_CONTACT not in reply_text:
         reply_text = (
             f"{reply_text}\n\n"
             f"For further assistance, please contact our support team at "
             f"{settings.HUMAN_HANDOFF_CONTACT}."
         )
-
     # --- Knowledge gap logging ---
+    # Only log when the knowledge base genuinely had nothing relevant AND
+    # the query is actually about Hyder's business (bikes, pricing,
+    # warranty, installments, etc.). Off-topic queries (recipes, trivia,
+    # unrelated companies, coding help, etc.) are intentionally skipped so
+    # the gap log stays a useful, actionable list for KB expansion.
     if not relevant and _is_domain_relevant_query(user_input):
         log_unanswered_query(user_input, language_hint)
+
     # Update sliding-window memory with this exchange
     conversation_memory.add_message(session_id, "user", user_input)
     conversation_memory.add_message(session_id, "assistant", reply_text)
