@@ -117,31 +117,40 @@ _DEVANAGARI_SCRIPT_RE = re.compile(r"[\u0900-\u097F]")
 # prompt also instructs Gemini to independently verify and mirror the
 # user's actual language.
 _ROMAN_URDU_HINTS = {
-    "hai", "hain", "kya", "kaise", "kitna", "kitni", "acha", "theek",
-    "nahi", "nhi", "mujhe", "mera", "meri", "aap", "ap", "bhai", "shukriya",
-    "keemat", "qeemat", "gari", "chahiye", "batayen", "bata", "sakta",
-    "sakti", "krna", "karna", "plz", "plzz", "kaha", "kahan", "milega",
+    "hai", "hain", "hy", "ha", "kya", "kyun", "kaise", "kitna", "kitni",
+    "acha", "theek", "thik", "nahi", "nhi", "mujhe", "mera", "meri", "aap",
+    "ap", "bhai", "shukriya", "keemat", "qeemat", "gari", "chahiye",
+    "batayen", "bata", "batao", "batado", "sakta", "sakti", "krna", "karna",
+    "kar", "karo", "plz", "plzz", "kaha", "kahan", "milega", "ki", "ka",
+    "ke", "ko", "se", "mein", "hun", "ho", "tha", "thi", "wala", "wali",
+    "sab", "saara", "saari", "sara", "sare", "saray", "sari", "poora", "pura",
 }
 
+_ENGLISH_STOPWORDS = {
+    "the", "is", "are", "what", "how", "which", "price", "of", "for",
+    "do", "does", "can", "could", "please", "and", "with", "about",
+    "tell", "me", "want", "need", "have", "has", "will", "would",
+}
 
 def detect_language(text: str) -> str:
-    """Return one of 'urdu', 'roman_urdu', or 'english' based on a fast
-    heuristic. Used only as a hint passed to the LLM — the system prompt
-    instructs Gemini to also verify and match the user's actual language.
-
-    Urdu script AND Devanagari (Hindi) script both map to 'urdu' — per the
-    language-handling rules, Devanagari input (which only ever shows up
-    from voice transcription of Urdu/Hindustani speech) must always get an
-    Urdu-script reply, never a Devanagari one.
-    """
     if _URDU_SCRIPT_RE.search(text) or _DEVANAGARI_SCRIPT_RE.search(text):
         return "urdu"
 
     tokens = set(re.findall(r"[a-zA-Z]+", text.lower()))
+    if not tokens:
+        return "english"
+
     if tokens & _ROMAN_URDU_HINTS:
         return "roman_urdu"
 
-    return "english"
+    # No script signal and no known Roman Urdu word — only call it English
+    # if it actually contains a recognizable English function word.
+    # Otherwise default to roman_urdu instead of silently mislabeling
+    # (this is exactly what happened with "bike k saray models ki price batao").
+    if tokens & _ENGLISH_STOPWORDS:
+        return "english"
+
+    return "roman_urdu"
 
 
 # --------------------------------------------------------------------------
@@ -169,7 +178,9 @@ _MULTI_MODEL_HINTS = {
     "all", "all bikes", "all models", "every model", "every bike",
     "compare", "comparison", "vs", "versus", "difference between",
     "sab", "sabhi", "har model", "har bike", "tamam",
-    "موازنہ", "تمام", "ہر ماڈل", "سب",
+    "saray", "sare", "saari", "sari", "sara", "poore", "pura",
+    "other model", "other models",
+    "موازنہ", "تمام", "ہر ماڈل", "سب", "باقی",
 }
 _MULTI_MODEL_TOP_K = 9
 
@@ -641,7 +652,11 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
-    retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(retrieval_query) else None
+    retrieval_top_k = (
+    _MULTI_MODEL_TOP_K
+    if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query)
+    else None
+)
     chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
     relevant = _has_relevant_context(chunks)
 
@@ -714,19 +729,23 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         api_failure = True
         relevant = False
 
-    handoff_triggered = (
+        handoff_triggered = (
         api_failure or (not relevant) or (settings.HUMAN_HANDOFF_CONTACT in reply_text)
     )
 
+    # Deterministic contact-line injection — never rely on the LLM to decide
+    # this on its own. The `not in reply_text` guard prevents a duplicate in
+    # the api_failure branch above, which already writes its own contact line.
+    if handoff_triggered and settings.HUMAN_HANDOFF_CONTACT not in reply_text:
+        reply_text = (
+            f"{reply_text}\n\n"
+            f"For further assistance, please contact our support team at "
+            f"{settings.HUMAN_HANDOFF_CONTACT}."
+        )
+
     # --- Knowledge gap logging ---
-    # Only log when the knowledge base genuinely had nothing relevant AND
-    # the query is actually about Hyder's business (bikes, pricing,
-    # warranty, installments, etc.). Off-topic queries (recipes, trivia,
-    # unrelated companies, coding help, etc.) are intentionally skipped so
-    # the gap log stays a useful, actionable list for KB expansion.
     if not relevant and _is_domain_relevant_query(user_input):
         log_unanswered_query(user_input, language_hint)
-
     # Update sliding-window memory with this exchange
     conversation_memory.add_message(session_id, "user", user_input)
     conversation_memory.add_message(session_id, "assistant", reply_text)
