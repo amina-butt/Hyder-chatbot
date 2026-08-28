@@ -46,31 +46,30 @@ def load_raw_text(path: str) -> str:
 
 
 def chunk_text(text: str, chunk_size: int, overlap: int) -> List[str]:
-    """Split text into overlapping chunks.
+    """Split text into chunks by combining consecutive paragraphs so 
 
-    A simple, dependency-free chunker: the knowledge base file uses blank
-    lines to separate logical entries (a model's spec sheet, an FAQ, etc).
-    We split on those first so a whole entry stays together whenever
-    possible, then further split any oversized entry into overlapping
-    fixed-size character windows.
+    headers and specs (like prices) remain in the same vector chunk.
     """
     entries = [e.strip() for e in text.split("\n\n") if e.strip()]
     chunks: List[str] = []
+    current_chunk = ""
 
     for entry in entries:
-        if len(entry) <= chunk_size:
-            chunks.append(entry)
-            continue
+        # If adding this paragraph exceeds chunk_size, store the current chunk
+        if len(current_chunk) + len(entry) + 2 > chunk_size:
+            if current_chunk:
+                chunks.append(current_chunk)
+            current_chunk = entry
+        else:
+            if current_chunk:
+                current_chunk += "\n\n" + entry
+            else:
+                current_chunk = entry
 
-        start = 0
-        while start < len(entry):
-            end = min(start + chunk_size, len(entry))
-            chunks.append(entry[start:end])
-            if end == len(entry):
-                break
-            start = end - overlap  # step forward, keeping overlap
+    if current_chunk:
+        chunks.append(current_chunk)
 
-    logger.info("Text split into %d chunks", len(chunks), extra={"session_id": _INGEST_SESSION})
+    logger.info("Text split into %d combined chunks", len(chunks), extra={"session_id": _INGEST_SESSION})
     return chunks
 
 

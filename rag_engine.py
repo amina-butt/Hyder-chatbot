@@ -209,7 +209,7 @@ class RetrievedChunk:
 # which both caused false "missing info" answers AND triggered the
 # handoff/contact-footer path unnecessarily. 0.78 keeps clearly unrelated
 # chunks out while no longer punishing legitimate cross-language matches.
-_RELEVANCE_DISTANCE_THRESHOLD = 0.78
+_RELEVANCE_DISTANCE_THRESHOLD = 0.85
 
 # When the user is asking about all three bikes at once (or explicitly
 # wants a comparison), a single-model top_k isn't enough — we need chunks
@@ -300,9 +300,27 @@ def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChun
     return chunks
 
 
-def _has_relevant_context(chunks: List[RetrievedChunk]) -> bool:
-    return any(c.distance <= _RELEVANCE_DISTANCE_THRESHOLD for c in chunks)
+def _is_price_or_multi_model_query(query: str) -> bool:
+    """Check if the query is price-related or multi-model to bypass strict threshold drops."""
+    if not query:
+        return False
+    query_lower = query.lower()
+    price_keywords = {"price", "prices", "cost", "costs", "pkr", "rupees", "rate", "rates", "kitne", "kitna", "worth", "keemat", "qeemat"}
+    has_price_kw = any(kw in query_lower for kw in price_keywords)
+    
+    models_found = len(re.findall(r"\b(eli|hli|sli)\b", query_lower))
+    is_multi_model = models_found > 1 or any(kw in query_lower for kw in ["all", "compare", "sab", "sari", "saray", "tamam"])
+    
+    return has_price_kw or is_multi_model
 
+
+def _has_relevant_context(chunks: List[RetrievedChunk], query: str = "") -> bool:
+    """Return True if chunks fall below threshold or match price/multi-model query exception."""
+    if not chunks:
+        return False
+    if query and _is_price_or_multi_model_query(query):
+        return True
+    return any(c.distance <= _RELEVANCE_DISTANCE_THRESHOLD for c in chunks)
 
 # --------------------------------------------------------------------------
 # Shorthand model-name normalization
@@ -976,7 +994,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
     retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) else None
     chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
-    relevant = _has_relevant_context(chunks)
+    relevant = _has_relevant_context(chunks, query=retrieval_query)
 
     context_block = (
         "\n---\n".join(c.text for c in chunks)
