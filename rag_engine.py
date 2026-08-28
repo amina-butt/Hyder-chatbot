@@ -132,15 +132,21 @@ _DEVANAGARI_SCRIPT_RE = re.compile(r"[\u0900-\u097F]")
 # prompt also instructs Gemini to independently verify and mirror the
 # user's actual language.
 _ROMAN_URDU_HINTS = {
-    "hai", "hain", "hy", "ha", "kya", "kyun", "kaise", "kitna", "kitni",
+    "hai", "hain", "hy", "ha", "kya", "kiya", "kyun", "kaise", "kitna", "kitni",
     "acha", "theek", "thik", "nahi", "nhi", "mujhe", "mera", "meri", "aap",
     "ap", "bhai", "shukriya", "keemat", "qeemat", "gari", "chahiye",
-    "batayen", "bata", "batao", "batado", "sakta", "sakti", "krna", "karna",
-    "kar", "karo", "plz", "plzz", "kaha", "kahan", "milega", "ki", "ka",
-    "ke", "ko", "se", "mein", "hun", "ho", "tha", "thi", "wala", "wali",
+    "batayen", "bata", "batao", "batado", "sakta", "sakti", "sakt", "krna",
+    "karna", "kar", "kr", "karo", "plz", "plzz", "kaha", "kahan", "kidher",
+    "kidhr", "milega", "ki", "ka", "ke", "ko", "se", "mein", "main", "mai",
+    "hun", "hoon", "ho", "tha", "thi", "wala", "wali",
     "sab", "saara", "saari", "sara", "sare", "saray", "sari", "poora", "pura",
 }
 
+# High-frequency ENGLISH function words. Because Roman Urdu is checked
+# first (see below), these only ever decide the "pure English, no
+# code-switching" case — a query that also contains a Roman Urdu grammar
+# word (e.g. "prices kiya hain") is caught by the Roman Urdu check before
+# this set is even consulted.
 _ENGLISH_STOPWORDS = {
     "the", "is", "are", "what", "how", "which", "price", "of", "for",
     "do", "does", "can", "could", "please", "and", "with", "about",
@@ -155,6 +161,18 @@ def detect_language(text: str) -> str:
     if not tokens:
         return "english"
 
+    # PRIORITY RULE: Roman Urdu signal wins over English signal.
+    # Real-world queries frequently code-switch — e.g. "in sab ki prices
+    # kiya hain and ma kidher se buy kr sakt hoon" mixes English loanwords
+    # ("prices", "buy") with Roman Urdu grammar words ("sab", "ki", "kiya",
+    # "hain", "kidher", "kr", "sakt", "hoon"). The presence of an English
+    # word like "price" or "buy" must NOT be enough to classify the whole
+    # message as English when Roman Urdu grammar words are also present —
+    # those grammar words are the reliable signal for which language the
+    # user is actually writing in, since English loanwords for
+    # bikes/prices/etc. are extremely common inside genuine Roman Urdu
+    # messages. So we check Roman Urdu hints FIRST, unconditionally, before
+    # ever looking at the English stopword set.
     if tokens & _ROMAN_URDU_HINTS:
         return "roman_urdu"
 
@@ -181,7 +199,17 @@ class RetrievedChunk:
 # A distance above this threshold is treated as "not actually relevant",
 # which routes to the human-handoff path instead of letting the LLM
 # construct an answer from weakly-related context.
-_RELEVANCE_DISTANCE_THRESHOLD = 0.65
+#
+# Was 0.65, which was too strict for cross-language semantic search: a
+# Roman Urdu / Urdu-script query embedded against an English-only
+# knowledge base naturally sits at a somewhat higher cosine distance than
+# an English query against the same English chunks, even when the chunk
+# is exactly the right one (e.g. a valid ELI 100 pricing chunk). At 0.65,
+# genuinely correct chunks were being flagged "not relevant" and dropped,
+# which both caused false "missing info" answers AND triggered the
+# handoff/contact-footer path unnecessarily. 0.78 keeps clearly unrelated
+# chunks out while no longer punishing legitimate cross-language matches.
+_RELEVANCE_DISTANCE_THRESHOLD = 0.78
 
 # When the user is asking about all three bikes at once (or explicitly
 # wants a comparison), a single-model top_k isn't enough — we need chunks
@@ -213,6 +241,40 @@ _multi_model_pattern = re.compile(
 
 def _is_multi_model_query(query: str) -> bool:
     return bool(_multi_model_pattern.search(query))
+
+
+# --------------------------------------------------------------------------
+# Price-query detection (used to force explicit model tokens into the
+# retrieval query — see _build_retrieval_query fast path below)
+# --------------------------------------------------------------------------
+# Root cause of the "wrong chunk retrieved" bug: a vague price query like
+# "in sab ki prices" was being rewritten down to generic terms like "price
+# cost", which is semantically closer to unrelated chunks that happen to
+# also mention a price-like figure (e.g. a monthly electricity-cost
+# estimate) than to the actual per-model retail pricing chunks. Explicitly
+# naming all three model identifiers in the retrieval query anchors the
+# embedding squarely on the bike pricing chunks instead.
+_PRICE_KEYWORDS = {
+    "price", "prices", "cost", "costs", "rate", "rates",
+    "keemat", "qeemat", "qeymat", "qeemt", "keemat",
+}
+_price_pattern = re.compile(
+    r"\b(" + "|".join(re.escape(k) for k in _PRICE_KEYWORDS) + r")\b",
+    re.IGNORECASE,
+)
+
+
+def _is_price_query(query: str) -> bool:
+    return bool(_price_pattern.search(query))
+
+
+# Deterministic retrieval query used whenever the user is asking about
+# price/cost across all models (or without naming one specific model) —
+# explicit model identifiers + "price cost warranty retail" instead of a
+# generic, easily-confused "price cost" search string.
+_ALL_MODELS_PRICE_QUERY = (
+    "ELI 100 HLI 100 SLI 100 price cost warranty retail"
+)
 
 
 def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
@@ -406,6 +468,26 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
         )
         return _ALL_MODELS_OVERVIEW_QUERY
 
+    # --- Fast path 1b: price query spanning all models ("sab ki prices",
+    # "all models price", etc.) — deterministic, no LLM call. Anchors
+    # retrieval on explicit model identifiers instead of letting a vague
+    # rewrite ("price cost") drift toward unrelated chunks that happen to
+    # mention a cost figure (e.g. a monthly electricity-cost estimate).
+    # Scoped strictly to queries that are BOTH price-related AND already
+    # signal "all models" — a single-model or genuinely ambiguous price
+    # question (no model named, no "all" signal) still falls through to
+    # the normal rewrite/clarification handling below. ---
+    if (
+        not _MODEL_NAME_RE.search(user_input)
+        and _is_price_query(user_input)
+        and _is_multi_model_query(user_input)
+    ):
+        logger.debug(
+            "Multi-model price fast path for retrieval query: %r", user_input,
+            extra={"session_id": session_id},
+        )
+        return _ALL_MODELS_PRICE_QUERY
+
     # --- Fast path 2: plain, self-contained English question ---
     # Detect English pronouns or references that rely on conversation history
     user_words = set(user_input.lower().split())
@@ -456,6 +538,19 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
                     "conversation history was previously about a different "
                     "model. Do not keep referring to an older model once the "
                     "user has moved on to a new one.\n\n"
+                    "PRICE / MULTI-MODEL RULE (important): if the question is "
+                    "about PRICE/cost/installments for 'all', 'sab', 'sabhi', "
+                    "'every model', or does not name one specific model at "
+                    "all, do NOT output a generic, vague search string like "
+                    "'price cost' — that drifts toward unrelated chunks that "
+                    "merely happen to mention a cost figure (e.g. a monthly "
+                    "electricity-cost estimate) instead of the actual bike "
+                    "pricing chunks. Instead, always spell out all three "
+                    "explicit model identifiers plus the topic: "
+                    "'ELI 100 HLI 100 SLI 100 price cost warranty retail'. "
+                    "Apply the same principle any time the query names "
+                    "multiple models or is otherwise ambiguous between them — "
+                    "prefer explicit model identifiers over generic nouns.\n\n"
                     "Output ONLY the English search keywords — no quotes, no "
                     "explanation, no answer to the question itself.\n\n"
                     "Examples:\n"
@@ -472,7 +567,13 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
                     "history)\n"
                     "History: assistant just described the ELI 100 | Latest "
                     "message: \"aur bhi batao\" -> Hyder electric bike other "
-                    "models price and specifications"
+                    "models price and specifications\n"
+                    "History: (none) | Latest message: \"in sab ki prices "
+                    "kiya hain\" -> ELI 100 HLI 100 SLI 100 price cost "
+                    "warranty retail\n"
+                    "History: (none) | Latest message: \"tamam bikes ki "
+                    "keemat batao\" -> ELI 100 HLI 100 SLI 100 price cost "
+                    "warranty retail"
                 ),
                 temperature=0.0,
                 max_output_tokens=64,
@@ -497,6 +598,16 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
         )
 
     # --- Path 4: heuristic fallback (Gemini rewrite call failed) ---
+    # Same price/multi-model safeguard as fast path 1b above, so a Gemini
+    # outage doesn't silently regress this behavior back to a vague,
+    # easily-confused "price cost" search string.
+    if (
+        not _MODEL_NAME_RE.search(normalized_input)
+        and _is_price_query(normalized_input)
+        and _is_multi_model_query(normalized_input)
+    ):
+        return _ALL_MODELS_PRICE_QUERY
+
     # If the current message already names its own model, don't dilute it
     # by blending in a (possibly different) model from recent history —
     # that's the exact "clinging to a stale model" failure mode this fixes.
@@ -543,6 +654,46 @@ _domain_pattern = re.compile(
     r"\b(" + "|".join(re.escape(k) for k in _DOMAIN_KEYWORDS) + r")\b",
     re.IGNORECASE,
 )
+
+
+# --------------------------------------------------------------------------
+# Explicit human-handoff / booking request detection
+# --------------------------------------------------------------------------
+# The support contact number must be shown ONLY when the user explicitly
+# asks for a human/booking, or when the query is genuinely unanswerable
+# from the knowledge base (see generate_reply) — never as a blanket footer
+# appended to ordinary informative answers. This pattern set captures the
+# "explicitly wants a human or to book something" case.
+_HUMAN_HANDOFF_REQUEST_PATTERNS = [
+    # English
+    r"\bhuman\b", r"\bagent\b", r"\breal person\b",
+    r"\btalk to (someone|a person|a human|an agent|support|sales)\b",
+    r"\bspeak (to|with) (someone|a person|a human|an agent|support|sales)\b",
+    r"\bcustomer (service|support)\b", r"\bcall (me|back)\b",
+    r"\bcontact (number|details|info)\b", r"\bphone number\b",
+    r"\bsupport number\b", r"\bhelpline\b",
+    r"\bbook(ing)? (a )?(test ride|appointment|bike)\b",
+    r"\bschedule a (test ride|visit|appointment)\b",
+    r"\bplace an order\b", r"\bhow do I book\b",
+    # Roman Urdu
+    r"\binsan se baat\b", r"\bbanda se baat\b", r"\bagent se baat\b",
+    r"\bnumber (do|dedo|chahiye|batao)\b",
+    r"\bcontact (karo|krwao|chahiye)\b",
+    r"\bbooking (karni|krni) hai\b", r"\btest ride book\b",
+    r"\brep(resentative)? se baat\b",
+    # Urdu script
+    r"انسان سے بات", r"نمبر دیں", r"بکنگ کرنی ہے", r"ایجنٹ سے بات",
+]
+_human_handoff_request_pattern = re.compile(
+    "|".join(_HUMAN_HANDOFF_REQUEST_PATTERNS), re.IGNORECASE
+)
+
+
+def _is_explicit_human_handoff_request(query: str) -> bool:
+    """True only when the user explicitly asks to be connected to a human,
+    to book/schedule something, or asks for contact details directly —
+    NOT for ordinary informative questions, even ones mentioning price."""
+    return bool(_human_handoff_request_pattern.search(query))
 
 
 def _is_domain_relevant_query(query: str) -> bool:
@@ -653,6 +804,21 @@ CRITICAL ROLE RULE:
   handful of items). Do not pad the answer with repeated caveats or restating the
   question — this is a chat interface and Urdu-script answers already take up more
   space per idea than English, so favor brevity over exhaustiveness.
+
+CONTEXT-USE RULE (strict — read the ENTIRE context block before answering):
+- If price, specification, or warranty information for a model the user is asking
+  about is present ANYWHERE in the "Context provided from knowledge base" section
+  below — even if it is phrased differently than the user's question, in a different
+  chunk than you expect, or mixed in with other models' details — you MUST extract
+  it and include it in your answer.
+- NEVER respond that the information is unavailable, missing, or not in the
+  database (e.g. never say the Roman Urdu equivalent of "filhal mojood nahi hain")
+  if that information actually exists in the context block below. Re-scan the full
+  context block before concluding something is missing — do not judge relevance
+  from the retrieval step alone.
+- Only say information is unavailable when you have actually checked the full
+  context block and the specific detail asked about (for the specific model asked
+  about) is genuinely absent from it.
 
 INTENT-SCOPED ANSWERS (match scope to what was actually asked):
 - If the user asks specifically about PRICE/cost/installments, answer with price
@@ -881,10 +1047,35 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         api_failure = True
         relevant = False
 
+    # `handoff_triggered` (returned to the caller) still reflects the full
+    # set of "this turn needs a human in the loop" conditions: a genuine
+    # API failure, a genuinely out-of-scope/unanswerable query, or the LLM
+    # itself having already surfaced the contact info per the system
+    # prompt's own missing-model/out-of-scope instructions.
     handoff_triggered = (
         api_failure or (not relevant) or (settings.HUMAN_HANDOFF_CONTACT in reply_text)
     )
-    if handoff_triggered and settings.HUMAN_HANDOFF_CONTACT not in reply_text:
+
+    # --- Support-contact footer: shown ONLY when it's actually warranted ---
+    # Previously this footer was appended automatically any time retrieval
+    # confidence was even slightly low OR the contact number happened to
+    # already be present — which, combined with an overly strict relevance
+    # threshold, meant ordinary well-answered questions kept getting a
+    # repetitive "contact us at 0309 9432 432" tacked on. Now it is only
+    # ever added in exactly two cases:
+    #   1. The user explicitly asked for a human/booking/contact details.
+    #   2. The query is genuinely out-of-scope or unanswerable from the
+    #      knowledge base (api_failure, or no relevant context at all) —
+    #      and even then, only if the model's own reply doesn't already
+    #      include the number (the system prompt already instructs Gemini
+    #      to surface it itself in the missing-model / out-of-scope cases).
+    # A normal, well-supported informative answer ends naturally with no
+    # boilerplate appended.
+    explicit_handoff_request = _is_explicit_human_handoff_request(user_input)
+    out_of_scope = api_failure or not relevant
+    needs_contact_footer = explicit_handoff_request or out_of_scope
+
+    if needs_contact_footer and settings.HUMAN_HANDOFF_CONTACT not in reply_text:
         reply_text = (
             f"{reply_text}\n\n"
             f"For further assistance, please contact our support team at "
