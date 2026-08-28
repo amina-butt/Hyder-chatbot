@@ -10,7 +10,7 @@ Responsibilities:
      voice transcription — as Urdu for the purposes of which script to
      reply in.
   3. Build a guarded system prompt (context boundaries + anti-prompt-injection
-     + language matching + human handoff policy).
+     + language matching + human handoff policy + intent-scoped answers).
   4. Call Gemini via the official `google-genai` SDK to generate a reply,
      with a short retry/backoff loop so a brief network hiccup doesn't
      immediately surface the "system trouble" fallback.
@@ -21,6 +21,21 @@ Responsibilities:
      base couldn't answer) to unanswered_queries.csv, so the KB can be
      expanded over time — while skipping queries that are simply off-topic
      (recipes, trivia, unrelated companies, etc.).
+
+Contextual query construction (see `_build_retrieval_query`) runs in
+priority order:
+  1. A deterministic broad/open-ended overview fast path ("sab kuch batao",
+     "tell me about your bikes") — no LLM call, so it works correctly even
+     as the very first message in a session.
+  2. A self-contained-query fast path for plain English questions that
+     already name their own subject — no LLM call needed.
+  3. A Gemini rewrite call for anything else (non-English, vague follow-ups,
+     pronoun references) with an explicit precedence rule so a model named
+     in the *latest* message always wins over one named earlier in history.
+  4. A heuristic fallback (used only if the Gemini rewrite call itself
+     fails) that checks whether the current message already names its own
+     model before blending in recent history, so a topic switch doesn't get
+     diluted by a stale model from a previous turn.
 """
 
 from __future__ import annotations
@@ -174,6 +189,12 @@ _RELEVANCE_DISTANCE_THRESHOLD = 0.65
 # lightweight keyword check (kept in English/Roman Urdu/Urdu script) used
 # to bump retrieval depth for that one query, without touching the normal
 # per-model default the rest of the time.
+#
+# NOTE: matched with word boundaries (see `_multi_model_pattern` below), not
+# plain substring containment. A naive `hint in lowered` check previously
+# meant "all" matched inside unrelated words like "installment"/
+# "installments" — a customer asking about EMI installments was silently
+# (and wrongly) getting boosted into an all-models retrieval.
 _MULTI_MODEL_HINTS = {
     "all", "all bikes", "all models", "every model", "every bike",
     "compare", "comparison", "vs", "versus", "difference between",
@@ -184,10 +205,14 @@ _MULTI_MODEL_HINTS = {
 }
 _MULTI_MODEL_TOP_K = 9
 
+_multi_model_pattern = re.compile(
+    r"\b(" + "|".join(re.escape(h) for h in _MULTI_MODEL_HINTS) + r")\b",
+    re.IGNORECASE,
+)
+
 
 def _is_multi_model_query(query: str) -> bool:
-    lowered = query.lower()
-    return any(hint in lowered for hint in _MULTI_MODEL_HINTS)
+    return bool(_multi_model_pattern.search(query))
 
 
 def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
@@ -215,6 +240,35 @@ def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChun
 
 def _has_relevant_context(chunks: List[RetrievedChunk]) -> bool:
     return any(c.distance <= _RELEVANCE_DISTANCE_THRESHOLD for c in chunks)
+
+
+# --------------------------------------------------------------------------
+# Shorthand model-name normalization
+# --------------------------------------------------------------------------
+# "HLI", "ELI", "SLI" on their own (without "100") must always resolve to
+# "HLI 100" / "ELI 100" / "SLI 100" — never trigger the "did you mean...?"
+# clarification flow, which is reserved for genuinely unlisted/mistyped
+# model numbers (e.g. "HLI 888"). Previously this resolution was left
+# entirely to the Gemini rewrite step's judgment, with nothing deterministic
+# backing it up — so a weak embedding match on bare "HLI" could still end up
+# in the unknown-model clarification path. This expansion runs BEFORE
+# retrieval so the vector search always sees the full model name.
+
+_MODEL_SHORTHAND_MAP = {"eli": "ELI 100", "hli": "HLI 100", "sli": "SLI 100"}
+
+# Negative lookahead skips expansion when "100" already follows, so we
+# never produce "ELI 100 100".
+_MODEL_SHORTHAND_RE = re.compile(r"\b(ELI|HLI|SLI)\b(?!\s*100)", re.IGNORECASE)
+
+# Matches a model name whether or not it's already been expanded — used to
+# decide "does this query already name its own subject?" in several places
+# below (pronoun-skip, broad-overview-skip, fallback stale-model guard).
+_MODEL_NAME_RE = re.compile(r"\b(eli|hli|sli)\b", re.IGNORECASE)
+
+
+def _expand_model_shorthand(text: str) -> str:
+    """Replace bare ELI/HLI/SLI mentions with their full model name."""
+    return _MODEL_SHORTHAND_RE.sub(lambda m: _MODEL_SHORTHAND_MAP[m.group(1).lower()], text)
 
 
 # --------------------------------------------------------------------------
@@ -259,10 +313,6 @@ _pronoun_reference_pattern = re.compile(
     "|".join(_PRONOUN_REFERENCE_PATTERNS), re.IGNORECASE
 )
 
-# A specific model name mentioned in the query itself means the pronoun
-# check above doesn't apply — the question is already self-contained.
-_MODEL_NAME_RE = re.compile(r"\b(eli|hli|sli)\b", re.IGNORECASE)
-
 
 def _is_vague_followup(text: str) -> bool:
     """Heuristic: matches a known vague-follow-up phrase, OR is a pronoun
@@ -283,17 +333,80 @@ def _is_vague_followup(text: str) -> bool:
 
     return False
 
+
+# --------------------------------------------------------------------------
+# Broad / open-ended overview detection
+# --------------------------------------------------------------------------
+# "Sab kuch batao", "tell me about your bikes", "mujhe details chahiyeh" are
+# NOT the same as a strict "compare all models" ask, and previously fell
+# through to the generic vague-followup path — which depends on
+# conversation history existing to produce anything useful, and on a fresh
+# session (or when the Gemini rewrite call happens to phrase things oddly)
+# could instead trip the "please specify a model" clarification. This is a
+# dedicated, deterministic fast path: no LLM call, no history dependency,
+# always resolves to a query that pulls chunks spanning all three models.
+#
+# Deliberately skipped when the message contains a pronoun reference or
+# already names a specific model — "iski details chahiye" ("its details")
+# is a follow-up about a *specific* earlier-mentioned bike, not a request
+# for the whole lineup, and must still go through pronoun resolution.
+
+_BROAD_OVERVIEW_PATTERNS = [
+    # English
+    r"\beverything\b", r"\ball (the )?details\b", r"\ball info\b",
+    r"\ball information\b", r"\btell me about your bikes\b",
+    r"\btell me about (the )?bikes\b", r"\byour (bike )?lineup\b",
+    r"\byour models\b", r"\bfull details\b", r"\bcomplete details\b",
+    r"\bwhat (bikes|models) do you have\b",
+    # Roman Urdu
+    r"\bsab kuch\b", r"\bsari detail(s)?\b", r"\bpoori detail\b",
+    r"\bpuri detail\b", r"\bsab batao\b", r"\bhar cheez batao\b",
+    r"\bcomplete detail do\b", r"\bdetails chahiye\b", r"\bdetail chahiye\b",
+    r"\bmujhe (sab|sari) batao\b",
+    # Urdu script
+    r"سب کچھ بتاؤ", r"پوری تفصیل", r"تمام تفصیلات", r"مکمل تفصیل",
+]
+_broad_overview_pattern = re.compile("|".join(_BROAD_OVERVIEW_PATTERNS), re.IGNORECASE)
+
+# Deliberately includes "all models" so this string also trips
+# `_is_multi_model_query`, giving it the same boosted top_k as an explicit
+# comparison request.
+_ALL_MODELS_OVERVIEW_QUERY = (
+    "Hyder Electric Bikes all models overview ELI 100 HLI 100 SLI 100 "
+    "price specifications features"
+)
+
+
+def _is_broad_overview_query(text: str) -> bool:
+    return bool(_broad_overview_pattern.search(text))
+
+
 def _build_retrieval_query(session_id: str, user_input: str, language_hint: str) -> str:
     """Return the string to embed and search ChromaDB with.
 
-    Plain, self-contained English questions are searched as-is — no reason
-    to spend an extra Gemini call on those. For anything else — Urdu
-    script, Roman Urdu, vague follow-ups, or queries using pronouns like 'it' —
-    we ask Gemini to rewrite it into a clean English search query using the
-    recent conversation context.
+    Priority order:
+      1. Broad/open-ended overview fast path (deterministic, no LLM call).
+      2. Plain, self-contained English question fast path (no LLM call).
+      3. Gemini rewrite using conversation history, for anything else —
+         Urdu script, Roman Urdu, vague follow-ups, or pronoun references.
+      4. Heuristic fallback if the Gemini rewrite call itself fails.
     """
+    normalized_input = _expand_model_shorthand(user_input)
     history_text = conversation_memory.get_history_as_text(session_id)
 
+    # --- Fast path 1: broad/open-ended overview ---
+    if (
+        not _pronoun_reference_pattern.search(user_input)
+        and not _MODEL_NAME_RE.search(user_input)
+        and _is_broad_overview_query(user_input)
+    ):
+        logger.debug(
+            "Broad-overview fast path for retrieval query: %r", user_input,
+            extra={"session_id": session_id},
+        )
+        return _ALL_MODELS_OVERVIEW_QUERY
+
+    # --- Fast path 2: plain, self-contained English question ---
     # Detect English pronouns or references that rely on conversation history
     user_words = set(user_input.lower().split())
     has_english_pronoun = bool(
@@ -309,15 +422,16 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
     )
 
     if not needs_rewrite:
-        return user_input
+        return normalized_input
 
+    # --- Path 3: Gemini rewrite ---
     try:
         _t0 = time.perf_counter()
         response = _call_gemini_with_retry(
             model=settings.GEMINI_MODEL,
             contents=(
                 f"Conversation history:\n{history_text}\n\n"
-                f"User's latest message: {user_input}"
+                f"User's latest message: {normalized_input}"
             ),
             config=types.GenerateContentConfig(
                 system_instruction=(
@@ -336,6 +450,12 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
                     "the conversation history and name the actual model/topic "
                     "explicitly in your output — never leave a pronoun "
                     "unresolved and never output non-English words.\n\n"
+                    "PRECEDENCE RULE: if the user's latest message explicitly "
+                    "names a specific model (ELI 100, HLI 100, or SLI 100), that "
+                    "model is the subject of the query — even if the "
+                    "conversation history was previously about a different "
+                    "model. Do not keep referring to an older model once the "
+                    "user has moved on to a new one.\n\n"
                     "Output ONLY the English search keywords — no quotes, no "
                     "explanation, no answer to the question itself.\n\n"
                     "Examples:\n"
@@ -346,6 +466,10 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
                     "ELI 100 battery warranty duration years\n"
                     "History: assistant just described the ELI 100 | Latest "
                     "message: \"Us ki price kya hai?\" -> ELI 100 price cost\n"
+                    "History: assistant just described the HLI 100 | Latest "
+                    "message: \"ELI 100 ki price?\" -> ELI 100 price cost "
+                    "(the user switched topics — ignore the HLI 100 from "
+                    "history)\n"
                     "History: assistant just described the ELI 100 | Latest "
                     "message: \"aur bhi batao\" -> Hyder electric bike other "
                     "models price and specifications"
@@ -372,12 +496,15 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
             extra={"session_id": session_id},
         )
 
-    # Fallback: heuristic expansion (recent exchange + current message)
+    # --- Path 4: heuristic fallback (Gemini rewrite call failed) ---
+    # If the current message already names its own model, don't dilute it
+    # by blending in a (possibly different) model from recent history —
+    # that's the exact "clinging to a stale model" failure mode this fixes.
     recent_messages = conversation_memory.get_history(session_id)[-2:]
-    if not recent_messages:
-        return user_input
+    if _MODEL_NAME_RE.search(normalized_input) or not recent_messages:
+        return normalized_input
     recent_text = " ".join(m.content for m in recent_messages)
-    return f"{recent_text} {user_input}".strip()
+    return f"{recent_text} {normalized_input}".strip()
 
 # --------------------------------------------------------------------------
 # Domain relevance check (used to decide what's worth logging as a
@@ -494,10 +621,11 @@ def build_system_prompt(language_hint: str, context_block: str) -> str:
 
     This follows the finalized prompt template: a critical role rule (no
     meta-discussion of instructions, always reply in the user's language),
-    a dedicated missing-model/typo handling flow, and the retrieved
-    knowledge-base context injected directly into the system instruction
-    (rather than the user turn), with the context itself framed as data
-    to answer from, not instructions to follow.
+    a dedicated missing-model/typo handling flow, shorthand-model-name
+    handling, broad/open-ended overview handling, intent-scoped answers,
+    and the retrieved knowledge-base context injected directly into the
+    system instruction (rather than the user turn), with the context
+    itself framed as data to answer from, not instructions to follow.
     """
     language_note = _LANGUAGE_INSTRUCTION.get(language_hint, _LANGUAGE_INSTRUCTION["english"])
 
@@ -526,6 +654,24 @@ CRITICAL ROLE RULE:
   question — this is a chat interface and Urdu-script answers already take up more
   space per idea than English, so favor brevity over exhaustiveness.
 
+INTENT-SCOPED ANSWERS (match scope to what was actually asked):
+- If the user asks specifically about PRICE/cost/installments, answer with price
+  (and relevant warranty or payment terms if the context has them) — do NOT also list
+  unrelated specs like range, load capacity, weight, or motor wattage unless the user
+  asked for those too.
+- If the user asks specifically about SPECS/features, answer with the specs asked
+  about — do NOT append price unless asked.
+- Only give the full combined picture (specs + price + warranty) when the user's
+  question is itself broad/open-ended, or explicitly asks for "everything"/"all
+  details" — see the broad-overview handling below.
+
+HANDLING SHORTHAND MODEL NAMES:
+- "ELI", "HLI", and "SLI" on their own always mean "ELI 100", "HLI 100", and "SLI 100"
+  respectively. Treat them as fully resolved model names. NEVER ask a clarification
+  question for these shorthand forms (e.g. never ask "did you mean HLI 100?" when the
+  user already said "HLI"). The clarification flow below is reserved strictly for a
+  model number that doesn't exist in the lineup at all (e.g. "HLI 888").
+
 HANDLING MULTI-MODEL / "ALL BIKES" / COMPARISON QUESTIONS (do this BEFORE considering
 any clarification below):
 - If the user asks about specs, prices, features, or details for ALL bike models, "all
@@ -540,6 +686,16 @@ any clarification below):
   context for — do not fall back to a clarifying question just because one model's
   info is incomplete.
 
+HANDLING BROAD / OPEN-ENDED QUESTIONS (e.g. "sab kuch batao", "tell me about your
+bikes", "mujhe details chahiyeh") — distinct from an explicit comparison request above:
+- Do NOT dump the full spec sheet for all three models, and do NOT trigger the
+  clarification flow.
+- Give a concise, high-level overview: a line or two per model (what it's best for,
+  one standout feature, starting price if it's in the context below).
+- End your reply with a natural, professional follow-up question, in the user's own
+  language, offering to go deeper — e.g. full specs, detailed pricing/installments, or
+  a recommendation based on what they need the bike for.
+
 HANDLING UNKNOWN/MISSING MODELS (e.g., user asks for HLI 888, but context only has HLI 100):
 1. Politely ask if they meant the nearest available model (e.g., "Did you mean HLI 100?" / "Kiya aap HLI 100 ke baare mein pooch rahe hain?").
 2. Clarify that if they strictly meant the asked model, details are not available in our database.
@@ -550,13 +706,13 @@ missing-model case above), say so plainly and give the same human support contac
 {settings.HUMAN_HANDOFF_CONTACT}. Never guess or invent specs, prices, or policies.
 
 CLARIFICATION — ONLY for genuinely vague queries: if the user's message does not name
-any specific model AND does not ask about "all"/"every" model or a comparison (e.g. a
-bare "what is the price?" or a vague follow-up like "tell me more" / "aur bhi batao"
-with no clear subject, and the retrieved context doesn't clearly cover it), do NOT
-start writing a numbered list or any structured answer. Instead, politely ask the user,
-in their own language, to specify which model or topic they'd like more details on. Do
-NOT apply this clarification path to multi-model or comparison questions — those are
-handled above.
+any specific model AND does not ask about "all"/"every" model, a comparison, or a
+broad/open-ended overview (see above) (e.g. a bare "what is the price?" with no clear
+subject and no prior context to resolve it from), do NOT start writing a numbered list
+or any structured answer. Instead, politely ask the user, in their own language, to
+specify which model or topic they'd like more details on. Do NOT apply this
+clarification path to multi-model, comparison, or broad/open-ended overview questions —
+those are handled above.
 
 Context provided from knowledge base:
 {context_block}
