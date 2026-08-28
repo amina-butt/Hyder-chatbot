@@ -272,10 +272,10 @@ def _is_price_query(query: str) -> bool:
 # price/cost across all models (or without naming one specific model) —
 # explicit model identifiers + "price cost warranty retail" instead of a
 # generic, easily-confused "price cost" search string.
-_ALL_MODELS_PRICE_QUERY = (
-    "ELI 100 HLI 100 SLI 100 price cost warranty retail"
-)
 
+_ALL_MODELS_PRICE_QUERY = (
+    "ELI 100 price PKR HLI 100 price PKR SLI 100 price PKR rate cost pricing"
+)
 
 def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
     """Query ChromaDB for the most relevant knowledge-base chunks."""
@@ -994,6 +994,15 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
     retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) else None
     chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
+
+    # --- ADD THIS DEBUG BLOCK ---
+    print("\n================ DEBUG: RETRIEVED CHUNKS ================")
+    print(f"Retrieval Query used: '{retrieval_query}'")
+    for i, c in enumerate(chunks):
+        print(f"\n[Chunk {i+1} | Distance: {c.distance:.4f}]")
+        print(c.text)
+    print("=========================================================\n")
+    # ----------------------------
     relevant = _has_relevant_context(chunks, query=retrieval_query)
 
     context_block = (

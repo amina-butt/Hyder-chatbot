@@ -25,7 +25,7 @@ Hyder Electric Bikes currently manufactures three models, positioned as entry-le
 
 The ELI 100 is Hyder's entry-level model, designed for students and first-time riders who want an affordable, low-maintenance daily commuter for city use.
 
-- Price: PKR 285,000.
+- The ELI 100 model price is PKR 180,000.
 - Motor: 1000W Brushless Hub Motor (gearless, chainless).
 - Battery: 48V 20Ah Lithium-ion, removable.
 - Top Speed: 55 km/h.
@@ -42,7 +42,7 @@ The ELI 100 is Hyder's entry-level model, designed for students and first-time r
 
 The HLI 100 sits in the middle of the lineup and is a hybrid model, meaning it supports both pedal-assist riding (for extending range and light exercise) and full throttle-only riding like a standard scooter.
 
-- Price: PKR 365,000.
+- The HLI 100 model price is PKR 220,000.
 - Motor: 1200W Hub Motor.
 - Battery: 60V 22Ah Lithium-ion, removable, with an optional dual-slot upgrade for a second battery.
 - Top Speed: 65 km/h.
@@ -59,7 +59,7 @@ The HLI 100 sits in the middle of the lineup and is a hybrid model, meaning it s
 
 The SLI 100 is Hyder's flagship model, aimed at riders who need the longest range, the highest load capacity, or who are running the bike commercially (for example, food delivery or courier work).
 
-- Price: PKR 465,000.
+- The SLI 100 model price is PKR 280,000.
 - Motor: 1500W Hub Motor with regenerative braking (recovers energy while braking to extend range).
 - Battery: 60V 30Ah Lithium-ion, dual-slot standard (ships with two battery packs).
 - Top Speed: 75 km/h.
