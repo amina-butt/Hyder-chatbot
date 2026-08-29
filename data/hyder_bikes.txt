@@ -26,7 +26,6 @@ Hyder Electric Bikes was founded in 2021 and is headquartered in Lahore, Pakista
 Hyder Electric Bikes currently manufactures three models, positioned as entry-level, mid-range hybrid, and premium/feature-rich respectively. All three use gearless, chainless hub-motor drivetrains with no clutch and no manual gear shifting — the rider simply twists the throttle to accelerate, similar in feel to a fully automatic scooter. As of the latest specification update, all three models share the same 1200W hub motor rating and Lithium-Iron-Phosphate (LiFePO4) battery chemistry, with the lineup now differentiated mainly by battery size/voltage, range, braking hardware, load capacity, and smart/security features rather than by motor power.
 
 ### ELI 100 (Hyder ELI)
-
 - Price: PKR 215,000
 - Motor: 1200W Brushless Hub Motor (gearless, chainless)
 - Battery: 60V 30Ah Lithium-Iron-Phosphate (LiFePO4), removable
