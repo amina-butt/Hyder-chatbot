@@ -44,7 +44,7 @@ class Settings(BaseSettings):
 
     # --- Knowledge base ingestion ---
     DATA_FILE_PATH: str = "data/hyder_bikes.txt"
-    CHUNK_SIZE: int = 500          # characters per chunk
+    CHUNK_SIZE: int = 1500          # characters per chunk
     CHUNK_OVERLAP: int = 80        # overlap between consecutive chunks
     TOP_K_RESULTS: int = 4         # number of chunks retrieved per query
 
