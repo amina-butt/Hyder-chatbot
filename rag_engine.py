@@ -231,7 +231,7 @@ _MULTI_MODEL_HINTS = {
     "other model", "other models",
     "موازنہ", "تمام", "ہر ماڈل", "سب", "باقی",
 }
-_MULTI_MODEL_TOP_K = 5
+_MULTI_MODEL_TOP_K = 8
 
 _multi_model_pattern = re.compile(
     r"\b(" + "|".join(re.escape(h) for h in _MULTI_MODEL_HINTS) + r")\b",
@@ -992,17 +992,13 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
+
+    if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query):
+        retrieval_query = f"{retrieval_query} Model Lineup Full Specifications ELI 100 HLI 100 SLI 100"
+
     retrieval_top_k = _MULTI_MODEL_TOP_K if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) else None
     chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
 
-    # --- ADD THIS DEBUG BLOCK ---
-    print("\n================ DEBUG: RETRIEVED CHUNKS ================")
-    print(f"Retrieval Query used: '{retrieval_query}'")
-    for i, c in enumerate(chunks):
-        print(f"\n[Chunk {i+1} | Distance: {c.distance:.4f}]")
-        print(c.text)
-    print("=========================================================\n")
-    # ----------------------------
     relevant = _has_relevant_context(chunks, query=retrieval_query)
 
     context_block = (
