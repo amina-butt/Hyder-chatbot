@@ -27,73 +27,71 @@ Hyder Electric Bikes currently manufactures three models, positioned as entry-le
 
 ### ELI 100 (Hyder ELI)
 
-- ELI 100 Price: PKR 215,000
-- ELI 100 Motor: 1200W Brushless Hub Motor (gearless, chainless)
-- ELI 100 Battery: 60V 30Ah Lithium-Iron-Phosphate (LiFePO4), removable
-- ELI 100 Battery Energy: approximately 1.8 kWh
-- ELI 100 Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
-- ELI 100 Top Speed: 65 km/h
-- ELI 100 Range (Eco Mode, single rider): 75 km
-- ELI 100 Charge Time: 4 hours from empty to full using the standard charger
-- ELI 100 Weight: 80 kg (unladen)
-- ELI 100 Max Load: 200 kg (combined rider + cargo)
-- ELI 100 Brakes: Drum brakes, front and rear
-- ELI 100 Suspension: Front telescopic fork with rear spring shock
-- ELI 100 Tires: 17-inch tube-type
-- ELI 100 Speedometer: Analogue display
-- ELI 100 Lights: LED headlight
-- ELI 100 Smart Features: Smart Cruise Control, Smart BMS with battery health information
-- ELI 100 Security Features: Parking Lock, Auto Parking Mode (the ELI 100 does not include the anti-theft alarm, tyre lock, remote lock, or keyless NFC start found on the HLI 100 and SLI 100/SLI-RAAHI)
-- ELI 100 Available Colors: Matte Black, Pearl White, Racing Red
-- ELI 100 Battery Warranty: 2 years (expected useful battery life is still approximately 500 charge cycles under typical use)
-- ELI 100 Motor/Controller Warranty: 1 year
+- Price: PKR 215,000
+- Motor: 1200W Brushless Hub Motor (gearless, chainless)
+- Battery: 60V 30Ah Lithium-Iron-Phosphate (LiFePO4), removable
+- Battery Energy: approximately 1.8 kWh
+- Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
+- Top Speed: 65 km/h
+- Range (Eco Mode, single rider): 75 km
+- Charge Time: 4 hours from empty to full using the standard charger
+- Weight: 80 kg (unladen)
+- Max Load: 200 kg (combined rider + cargo)
+- Brakes: Drum brakes, front and rear
+- Suspension: Front telescopic fork with rear spring shock
+- Tires: 17-inch tube-type
+- Speedometer: Analogue display
+- Lights: LED headlight
+- Smart Features: Smart Cruise Control, Smart BMS with battery health information
+- Security Features: Parking Lock, Auto Parking Mode (does not include anti-theft alarm, tyre lock, remote lock, or keyless NFC start found on HLI 100 and SLI 100/SLI-RAAHI)
+- Available Colors: Matte Black, Pearl White, Racing Red
+- Battery Warranty: 2 years (expected useful battery life is still approximately 500 charge cycles under typical use)
+- Motor/Controller Warranty: 1 year
 
 ### HLI 100 (Hyder HLI)
-
-- HLI 100 Price: PKR 240,000
-- HLI 100 Motor: 1200W Hub Motor
-- HLI 100 Battery: 72V 30Ah Lithium-Iron-Phosphate (LiFePO4), removable, with an optional dual-slot upgrade for a second battery
-- HLI 100 Battery Energy: approximately 2.2 kWh
-- HLI 100 Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
-- HLI 100 Top Speed: 70 km/h
-- HLI 100 Range (Eco Mode / pedal-assist, single rider): 100 km
-- HLI 100 Charge Time: 3 hours from empty to full
-- HLI 100 Weight: 82 kg (unladen)
-- HLI 100 Max Load: 200 kg (combined rider + cargo)
-- HLI 100 Brakes: Drum brakes, front and rear
-- HLI 100 Suspension: Front telescopic fork with rear dual shock
-- HLI 100 Tires: 17-inch tube-type
-- HLI 100 Speedometer: Digital display
-- HLI 100 Lights: LED headlight
-- HLI 100 Smart Features: Smart Cruise Control, Keyless Start (NFC), USB charging, Smart BMS with battery health information
-- HLI 100 Security Features: Anti-Theft Alarm with Tyre Lock, Remote Lock, Parking Lock, Auto Parking Mode
-- HLI 100 Available Colors: Graphite Grey, Ocean Blue, Matte Black
-- HLI 100 Battery Warranty: 2 years (expected useful battery life is still approximately 700 charge cycles under typical use)
-- HLI 100 Motor/Controller Warranty: 1 year
-- HLI 100 Riding Mode: retains hybrid pedal-assist capability alongside full throttle-only riding, supporting both pedal-assist riding (for extending range and light exercise) and standard scooter-style riding
+- Price: PKR 240,000
+- Motor: 1200W Hub Motor
+- Battery: 72V 30Ah Lithium-Iron-Phosphate (LiFePO4), removable, with an optional dual-slot upgrade for a second battery
+- Battery Energy: approximately 2.2 kWh
+- Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
+- Top Speed: 70 km/h
+- Range (Eco Mode / pedal-assist, single rider): 100 km
+- Charge Time: 3 hours from empty to full
+- Weight: 82 kg (unladen)
+- Max Load: 200 kg (combined rider + cargo)
+- Brakes: Drum brakes, front and rear
+- Suspension: Front telescopic fork with rear dual shock
+- Tires: 17-inch tube-type
+- Speedometer: Digital display
+- Lights: LED headlight
+- Smart Features: Smart Cruise Control, Keyless Start (NFC), USB charging, Smart BMS with battery health information
+- Security Features: Anti-Theft Alarm with Tyre Lock, Remote Lock, Parking Lock, Auto Parking Mode
+- Available Colors: Graphite Grey, Ocean Blue, Matte Black
+- Battery Warranty: 2 years (expected useful battery life is still approximately 700 charge cycles under typical use)
+- Motor/Controller Warranty: 1 year
+- Riding Mode: Retains hybrid pedal-assist capability alongside full throttle-only riding, supporting both pedal-assist riding (for extending range and light exercise) and standard scooter-style riding
 
 ### SLI 100 (Hyder SLI-RAAHI)
-
-- SLI 100 Price: PKR 250,000
-- SLI 100 Motor: 1200W Hub Motor with regenerative braking (recovers energy while braking to extend range)
-- SLI 100 Battery: 60V 30Ah Lithium-Iron-Phosphate (LiFePO4), dual-slot standard (ships with two battery packs)
-- SLI 100 Battery Energy: approximately 1.8 kWh per pack (around 3.6 kWh across both packs)
-- SLI 100 Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
-- SLI 100 Top Speed: 65 km/h
-- SLI 100 Range (Eco Mode, single rider): 75 km per pack
-- SLI 100 Charge Time: 3 hours with the standard charger
-- SLI 100 Weight: 90 kg (unladen)
-- SLI 100 Max Load: 175 kg rider/cargo, plus a 25 kg-rated rear rack for additional delivery cargo
-- SLI 100 Brakes: Disc brakes, front and rear
-- SLI 100 Suspension: Front telescopic fork with rear dual shock
-- SLI 100 Tires: 12-inch tubeless
-- SLI 100 Speedometer: Digital display
-- SLI 100 Lights: All-LED lighting
-- SLI 100 Smart Features: Smart Cruise Control, Keyless Start (NFC), USB charging, under-seat storage, Smart BMS with battery health information
-- SLI 100 Security Features: Anti-Theft Alarm with Tyre Lock, Side-Stand Cut-off, Remote Lock, Hazard Lights, Parking Lock
-- SLI 100 Available Colors: Jet Black, Titanium Silver, Forest Green
-- SLI 100 Battery Warranty: 2 years (expected useful battery life is still approximately 1,000 charge cycles under typical use)
-- SLI 100 Motor/Controller Warranty: 1 year
+- Price: PKR 250,000
+- Motor: 1200W Hub Motor with regenerative braking (recovers energy while braking to extend range)
+- Battery: 60V 30Ah Lithium-Iron-Phosphate (LiFePO4), dual-slot standard (ships with two battery packs)
+- Battery Energy: approximately 1.8 kWh per pack (around 3.6 kWh across both packs)
+- Battery Protection & Electronics: Smart BMS with battery health reporting, stainless steel casing, Anderson connector, IP56-rated sealing, integrated temperature sensors
+- Top Speed: 65 km/h
+- Range (Eco Mode, single rider): 75 km per pack
+- Charge Time: 3 hours with the standard charger
+- Weight: 90 kg (unladen)
+- Max Load: 175 kg rider/cargo, plus a 25 kg-rated rear rack for additional delivery cargo
+- Brakes: Disc brakes, front and rear
+- Suspension: Front telescopic fork with rear dual shock
+- Tires: 12-inch tubeless
+- Speedometer: Digital display
+- Lights: All-LED lighting
+- Smart Features: Smart Cruise Control, Keyless Start (NFC), USB charging, under-seat storage, Smart BMS with battery health information
+- Security Features: Anti-Theft Alarm with Tyre Lock, Side-Stand Cut-off, Remote Lock, Hazard Lights, Parking Lock
+- Available Colors: Jet Black, Titanium Silver, Forest Green
+- Battery Warranty: 2 years (expected useful battery life is still approximately 1,000 charge cycles under typical use)
+- Motor/Controller Warranty: 1 year
 
 ### Accessories & Add-ons
 
