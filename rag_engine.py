@@ -231,7 +231,7 @@ _MULTI_MODEL_HINTS = {
     "other model", "other models",
     "موازنہ", "تمام", "ہر ماڈل", "سب", "باقی",
 }
-_MULTI_MODEL_TOP_K = 9
+_MULTI_MODEL_TOP_K = 5
 
 _multi_model_pattern = re.compile(
     r"\b(" + "|".join(re.escape(h) for h in _MULTI_MODEL_HINTS) + r")\b",
