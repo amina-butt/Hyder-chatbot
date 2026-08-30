@@ -112,6 +112,25 @@ def _call_gemini_with_retry(*, model: str, contents, config: types.GenerateConte
     assert last_exc is not None
     raise last_exc
 
+def _call_gemini_stream_with_retry(*, model: str, contents, config: types.GenerateContentConfig):
+    """Call Gemini's generate_content_stream with a bounded retry/backoff loop."""
+    last_exc: Exception | None = None
+    for attempt in range(1, _GEMINI_MAX_ATTEMPTS + 1):
+        try:
+            return _genai_client.models.generate_content_stream(
+                model=model, contents=contents, config=config
+            )
+        except Exception as exc:
+            last_exc = exc
+            if attempt < _GEMINI_MAX_ATTEMPTS:
+                delay = _GEMINI_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                logger.warning(
+                    "Gemini stream call failed on attempt %d/%d (%s) — retrying in %.1fs",
+                    attempt, _GEMINI_MAX_ATTEMPTS, exc, delay,
+                )
+                time.sleep(delay)
+    assert last_exc is not None
+    raise last_exc
 
 # --------------------------------------------------------------------------
 # Language detection
@@ -1133,7 +1152,99 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
 
     return reply_text, handoff_triggered
 
+def generate_reply_stream(session_id: str, user_input: str):
+    """Yields response text chunks in real-time as Gemini generates them."""
+    language_hint = detect_language(user_input)
+    _turn_start = time.perf_counter()
+    retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
 
+    if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query):
+        retrieval_query = f"{retrieval_query} Model Lineup Full Specifications ELI 100 HLI 100 SLI 100"
+
+    retrieval_top_k = (
+        _MULTI_MODEL_TOP_K 
+        if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) 
+        else None
+    )
+    chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
+    relevant = _has_relevant_context(chunks, query=retrieval_query)
+
+    context_block = (
+        "\n---\n".join(c.text for c in chunks)
+        if chunks
+        else "(no relevant knowledge base entries found)"
+    )
+
+    history_text = conversation_memory.get_history_as_text(session_id)
+    system_prompt = build_system_prompt(language_hint, context_block)
+    user_turn = build_user_turn(user_input, history_text)
+
+    api_failure = False
+    full_reply = ""
+
+    try:
+        _t0 = time.perf_counter()
+        response_stream = _call_gemini_stream_with_retry(
+            model=settings.GEMINI_MODEL,
+            contents=user_turn,
+            config=types.GenerateContentConfig(
+                system_instruction=system_prompt,
+                temperature=settings.GEMINI_TEMPERATURE,
+                max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+            ),
+        )
+
+        for chunk in response_stream:
+            if chunk.text:
+                full_reply += chunk.text
+                yield chunk.text
+
+        logger.info(
+            "[BENCHMARK] Gemini stream generation took %.1f ms",
+            (time.perf_counter() - _t0) * 1000,
+            extra={"session_id": session_id},
+        )
+
+        if not full_reply.strip():
+            clarification = _clarify_message(language_hint)
+            full_reply = clarification
+            yield clarification
+
+    except Exception:
+        logger.exception("Gemini streaming failed after retries", extra={"session_id": session_id})
+        error_msg = (
+            "Sorry, I'm having trouble reaching our systems right now. "
+            f"Please contact our team directly at {settings.HUMAN_HANDOFF_CONTACT}."
+        )
+        full_reply = error_msg
+        api_failure = True
+        relevant = False
+        yield error_msg
+
+    explicit_handoff_request = _is_explicit_human_handoff_request(user_input)
+    out_of_scope = api_failure or not relevant
+    needs_contact_footer = explicit_handoff_request or out_of_scope
+
+    if needs_contact_footer and settings.HUMAN_HANDOFF_CONTACT not in full_reply:
+        footer = (
+            f"\n\nFor further assistance, please contact our support team at "
+            f"{settings.HUMAN_HANDOFF_CONTACT}."
+        )
+        full_reply += footer
+        yield footer
+
+    if not relevant and _is_domain_relevant_query(user_input):
+        log_unanswered_query(user_input, language_hint)
+
+    conversation_memory.add_message(session_id, "user", user_input)
+    conversation_memory.add_message(session_id, "assistant", full_reply)
+
+    logger.info(
+        "[BENCHMARK] Total generate_reply_stream turn took %.1f ms",
+        (time.perf_counter() - _turn_start) * 1000,
+        extra={"session_id": session_id},
+    )
+    
 # --------------------------------------------------------------------------
 # Voice input support
 # --------------------------------------------------------------------------
