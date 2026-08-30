@@ -27,7 +27,7 @@ from audio_recorder_streamlit import audio_recorder
 
 from config import settings
 from memory import conversation_memory
-from rag_engine import generate_reply, transcribe_audio
+from rag_engine import generate_reply_stream, transcribe_audio
 
 # --------------------------------------------------------------------------
 # Page config (must be the first Streamlit command)
@@ -104,20 +104,12 @@ def _process_prompt(prompt: str) -> None:
         st.markdown(prompt)
 
     with st.chat_message("assistant"):
-        with st.spinner("Thinking..."):
-            reply, handoff = generate_reply(st.session_state.session_id, prompt)
-
-        display_reply = reply
-        if handoff:
-            display_reply += (
-                f"\n\n*Need more help? Reach our team directly at "
-                f"{settings.HUMAN_HANDOFF_CONTACT}.*"
-            )
-
-        st.markdown(display_reply)
+        # st.write_stream renders streaming chunks live and returns the complete text string once done
+        display_reply = st.write_stream(
+            generate_reply_stream(st.session_state.session_id, prompt)
+        )
 
     st.session_state.messages.append({"role": "assistant", "content": display_reply})
-
 
 # --------------------------------------------------------------------------
 # Header — plain, native, theme-safe
