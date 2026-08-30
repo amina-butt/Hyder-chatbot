@@ -53,12 +53,16 @@ st.markdown(
         padding-bottom: 2rem;
         max-width: 720px;
     }
-    /* Small caption above the mic button, spaced tight to the chat input
-       right below it. */
+    /* Small caption above the mic button, spaced tight to the chat input */
     .mic-caption {
         font-size: 0.8rem;
         opacity: 0.65;
         margin-bottom: -0.5rem;
+    }
+    /* Auto-detect text direction per paragraph (Urdu = Right-to-Left, English = Left-to-Right) */
+    [data-testid="stChatMessageContent"] {
+        unicode-bidi: plaintext;
+        text-align: start;
     }
     </style>
     """,
