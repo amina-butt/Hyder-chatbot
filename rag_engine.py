@@ -43,6 +43,7 @@ from __future__ import annotations
 import csv
 import os
 import re
+import threading
 import time
 from dataclasses import dataclass
 from datetime import datetime
@@ -62,13 +63,63 @@ logger = get_logger(__name__)
 # --- Module-level, one-time initialization. These are expensive to build
 # (model loading, DB connection), so we create them once at import time
 # rather than per-request. ---
-_embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-_chroma_client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
-_collection = _chroma_client.get_or_create_collection(
-    name=settings.CHROMA_COLLECTION_NAME,
-    metadata={"hnsw:space": "cosine"},
-)
-_genai_client = genai.Client(api_key=settings.GEMINI_API_KEY)
+#
+# Wrapped in try/except rather than left to crash the import: a bare crash
+# here kills the whole process before uvicorn can even bind a port, which
+# is fine for a hard config error you'll see immediately in your terminal,
+# but ugly in a container/orchestrator that just sees the process exit and
+# restart-loops it. Instead we record success/failure in _READY /
+# _INIT_ERROR, keep the process alive, and let /health report the real
+# status — generate_reply / generate_reply_stream also refuse to run (see
+# _ensure_ready) rather than blowing up on a None client.
+_READY: bool = False
+_INIT_ERROR: str | None = None
+
+try:
+    _embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
+    _chroma_client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
+    _collection = _chroma_client.get_or_create_collection(
+        name=settings.CHROMA_COLLECTION_NAME,
+        metadata={"hnsw:space": "cosine"},
+    )
+    # http_options.timeout bounds a single HTTP call to Gemini (in
+    # milliseconds). Without this, a stalled connection (not an error,
+    # just silence) can hang indefinitely — see the retry wrappers below,
+    # which only handle calls that raise, not calls that never return.
+    _genai_client = genai.Client(
+        api_key=settings.GEMINI_API_KEY,
+        http_options=types.HttpOptions(
+            timeout=int(settings.GEMINI_TIMEOUT_SECONDS * 1000)
+        ),
+    )
+    _READY = True
+except Exception as exc:  # noqa: BLE001 - deliberately broad; any failure
+    # here means the engine can't serve requests, regardless of cause.
+    _INIT_ERROR = f"{type(exc).__name__}: {exc}"
+    _embedding_model = None
+    _chroma_client = None
+    _collection = None
+    _genai_client = None
+    logger.exception("rag_engine failed to initialize at import time")
+
+
+def is_ready() -> tuple[bool, str | None]:
+    """Whether module-level dependencies (embedding model, Chroma
+    collection, Gemini client) initialized successfully at import time.
+
+    Intended for a real /health readiness check in main.py, e.g.:
+        ready, error = is_ready()
+        return {"status": "ok"} if ready else JSONResponse(503, ...)
+    """
+    return _READY, _INIT_ERROR
+
+
+def _ensure_ready() -> None:
+    """Raise clearly if called before/without successful init, instead of
+    letting a None client surface a confusing AttributeError deep in a
+    request."""
+    if not _READY:
+        raise RuntimeError(f"rag_engine is not ready: {_INIT_ERROR}")
 
 
 # --------------------------------------------------------------------------
@@ -750,26 +801,33 @@ def _is_domain_relevant_query(query: str) -> bool:
 _UNANSWERED_LOG_PATH = "unanswered_queries.csv"
 _CSV_HEADER = ["Timestamp", "User_Query", "Language"]
 
+# Under FastAPI, generate_reply/generate_reply_stream calls run concurrently
+# on different threads (via iterate_in_threadpool for the streaming path).
+# Two threads both doing the "does file exist -> maybe write header -> write
+# row" sequence at once can interleave writes or double-write the header —
+# a single process-wide lock serializes it. This only covers this one
+# process; if you later run multiple worker processes against the same
+# file, add a file lock (e.g. `filelock`) or move logging to a shared store.
+_unanswered_log_lock = threading.Lock()
+
 
 def log_unanswered_query(user_query: str, language: str) -> None:
     """Append a domain-relevant, unanswered query to unanswered_queries.csv
     so the knowledge base can be reviewed and expanded over time.
 
-    Creates the file (with a header row) on first use. Safe to call
-    concurrently from a single process; if you later scale to multiple
-    worker processes writing the same file, consider a file lock or moving
-    this to a shared datastore instead.
+    Creates the file (with a header row) on first use. Thread-safe within
+    this process via _unanswered_log_lock.
     """
-    file_exists = os.path.isfile(_UNANSWERED_LOG_PATH)
-
     try:
-        with open(_UNANSWERED_LOG_PATH, mode="a", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            if not file_exists:
-                writer.writerow(_CSV_HEADER)
+        with _unanswered_log_lock:
+            file_exists = os.path.isfile(_UNANSWERED_LOG_PATH)
+            with open(_UNANSWERED_LOG_PATH, mode="a", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                if not file_exists:
+                    writer.writerow(_CSV_HEADER)
 
-            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            writer.writerow([timestamp, user_query, language])
+                timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                writer.writerow([timestamp, user_query, language])
 
         logger.info(
             "Knowledge gap logged to %s", _UNANSWERED_LOG_PATH,
@@ -1008,6 +1066,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     Returns:
         (reply_text, handoff_triggered)
     """
+    _ensure_ready()
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
@@ -1154,6 +1213,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
 
 def generate_reply_stream(session_id: str, user_input: str):
     """Yields response text chunks in real-time as Gemini generates them."""
+    _ensure_ready()
     language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)

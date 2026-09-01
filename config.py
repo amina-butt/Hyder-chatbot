@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     # can cost noticeably more tokens. 2048 was still occasionally tight
     # for longer Urdu answers, so this gives real headroom.
     GEMINI_MAX_OUTPUT_TOKENS: int = 4096
+    # Per-HTTP-call timeout to Gemini, in seconds. Bounds a stalled/hanging
+    # connection — without this, a call that never returns (rather than
+    # erroring) can block a threadpool slot indefinitely.
+    GEMINI_TIMEOUT_SECONDS: float = 30.0
 
     # --- Vector store (ChromaDB) ---
     CHROMA_DB_PATH: str = "./chroma_db"
@@ -50,6 +54,8 @@ class Settings(BaseSettings):
 
     # --- Conversation memory ---
     MAX_HISTORY_TURNS: int = 6     # sliding window size (user+assistant pairs)
+    SESSION_TTL_HOURS: float = 6.0  # evict a session after this long with no activity
+    MAX_SESSIONS: int = 10000       # hard cap on concurrent sessions held in memory
 
     # --- Logging ---
     LOG_DIR: str = "logs"
@@ -57,6 +63,14 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
     LOG_MAX_BYTES: int = 5 * 1024 * 1024
     LOG_BACKUP_COUNT: int = 3
+
+    # --- API auth ---
+    # Shared secret your frontend must send as X-API-Key. Left as None by
+    # default so local dev doesn't need one set; the auth dependency in
+    # main.py refuses to start serving the protected endpoint if this is
+    # unset in a non-development ENVIRONMENT (see main.py's startup check).
+    API_KEY: str | None = None
+    ENVIRONMENT: str = "development"  # "development" | "production"
 
     # --- Company / support info ---
     COMPANY_NAME: str = "Hyder Electric Bikes"
