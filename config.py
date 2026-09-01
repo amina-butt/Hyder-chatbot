@@ -37,7 +37,7 @@ class Settings(BaseSettings):
     # Per-HTTP-call timeout to Gemini, in seconds. Bounds a stalled/hanging
     # connection — without this, a call that never returns (rather than
     # erroring) can block a threadpool slot indefinitely.
-    GEMINI_TIMEOUT_SECONDS: float = 10.0
+    GEMINI_TIMEOUT_SECONDS: float = 30.0
 
     # --- Vector store (ChromaDB) ---
     CHROMA_DB_PATH: str = "./chroma_db"

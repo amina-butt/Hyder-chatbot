@@ -1107,7 +1107,6 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
                 system_instruction=system_prompt,
                 temperature=settings.GEMINI_TEMPERATURE,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
         _elapsed_ms = (time.perf_counter() - _t0) * 1000
@@ -1286,7 +1285,6 @@ async def generate_reply_stream(session_id: str, user_input: str):
                 system_instruction=system_prompt,
                 temperature=settings.GEMINI_TEMPERATURE,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
@@ -1393,9 +1391,7 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
                     "marks, and no Devanagari characters."
                 ),
             ],
-            config=types.GenerateContentConfig(
-                thinking_config=types.ThinkingConfig(thinking_budget=0),
-            ),
+            config=types.GenerateContentConfig(),
         )
         logger.info(
             "[BENCHMARK] Audio transcription took %.1f ms",

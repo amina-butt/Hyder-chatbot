@@ -10,12 +10,20 @@ production-hardening pieces a Streamlit app didn't need: CORS, per-IP
 rate limiting, API key auth, a real readiness check, request-id/latency
 logging, and structured error responses.
 """
-
+from dotenv import load_dotenv
 import json
 import os
 import secrets
 import time
 import uuid
+
+import sys
+import asyncio
+
+if sys.platform == "win32":
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+load_dotenv()
 
 import uvicorn
 from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
