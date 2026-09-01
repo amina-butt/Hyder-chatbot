@@ -3,9 +3,9 @@ main.py
 -------
 Production FastAPI entrypoint for Hyder Assistant.
 
-Replaces streamlit_app.py as the app's front door. Wraps the existing
-rag_engine.generate_reply_stream (a blocking sync generator) for safe use
-inside an async event loop, exposes it over SSE, and adds the
+Replaces streamlit_app.py as the app's front door. Consumes
+rag_engine.generate_reply_stream — a native async generator that offloads
+its own blocking work internally — directly over SSE, and adds the
 production-hardening pieces a Streamlit app didn't need: CORS, per-IP
 rate limiting, API key auth, a real readiness check, request-id/latency
 logging, and structured error responses.
@@ -27,7 +27,6 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
-from starlette.concurrency import iterate_in_threadpool
 
 from config import settings
 from logger import get_logger
@@ -190,18 +189,17 @@ async def health():
 # Streaming chat endpoint
 # --------------------------------------------------------------------------
 async def _event_generator(request: Request, session_id: str, message: str):
-    """Adapts the blocking generate_reply_stream generator into an async
-    SSE event stream.
+    """Streams SSE events directly from generate_reply_stream.
 
-    generate_reply_stream does blocking I/O (ChromaDB query, sentence-
-    transformer encode, Gemini call) on every `next()`, so it's driven
-    through starlette's iterate_in_threadpool rather than iterated
-    directly — otherwise it would block the event loop and stall every
-    other concurrent request on this worker.
+    generate_reply_stream is now a native async generator: the blocking
+    embedding/ChromaDB work is offloaded internally via asyncio.to_thread,
+    and the Gemini call uses the SDK's async streaming client. Nothing it
+    does blocks the event loop directly any more, so it's iterated here
+    with a plain `async for` instead of being driven through
+    iterate_in_threadpool.
     """
-    sync_gen = generate_reply_stream(session_id, message)
     try:
-        async for chunk in iterate_in_threadpool(sync_gen):
+        async for chunk in generate_reply_stream(session_id, message):
             if await request.is_disconnected():
                 logger.info(
                     "Client disconnected mid-stream", extra={"session_id": session_id}
@@ -230,7 +228,15 @@ async def _event_generator(request: Request, session_id: str, message: str):
 @limiter.limit("15/minute")
 async def chat_stream(request: Request, payload: ChatRequest):
     return EventSourceResponse(
-        _event_generator(request, payload.session_id, payload.message)
+        _event_generator(request, payload.session_id, payload.message),
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            # Tells nginx-style reverse proxies not to buffer the response,
+            # which would otherwise hold chunks until a buffer threshold
+            # is hit and defeat the point of streaming.
+            "X-Accel-Buffering": "no",
+        },
     )
 
 

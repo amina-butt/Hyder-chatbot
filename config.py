@@ -25,13 +25,19 @@ class Settings(BaseSettings):
     GEMINI_TEMPERATURE: float = 0.3
     # Urdu script (and to a lesser extent Roman Urdu) tokenizes less
     # efficiently than English under most tokenizers — the same sentence
-    # can cost noticeably more tokens. 2048 was still occasionally tight
-    # for longer Urdu answers, so this gives real headroom.
-    GEMINI_MAX_OUTPUT_TOKENS: int = 4096
+    # can cost noticeably more tokens. This was previously raised to 4096
+    # because 2048 was occasionally tight for longer Urdu answers.
+    # Lowered to 510 for faster streaming turnaround — NOTE: this
+    # reintroduces the truncation risk the 4096 change existed to avoid,
+    # especially for longer Urdu replies and multi-model comparisons.
+    # rag_engine._response_was_truncated / _trim_to_last_complete_sentence
+    # will kick in more often as a result; watch for cut-off replies and
+    # raise this back up if that becomes noticeable.
+    GEMINI_MAX_OUTPUT_TOKENS: int = 510
     # Per-HTTP-call timeout to Gemini, in seconds. Bounds a stalled/hanging
     # connection — without this, a call that never returns (rather than
     # erroring) can block a threadpool slot indefinitely.
-    GEMINI_TIMEOUT_SECONDS: float = 30.0
+    GEMINI_TIMEOUT_SECONDS: float = 10.0
 
     # --- Vector store (ChromaDB) ---
     CHROMA_DB_PATH: str = "./chroma_db"

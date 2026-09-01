@@ -22,24 +22,34 @@ Responsibilities:
      expanded over time — while skipping queries that are simply off-topic
      (recipes, trivia, unrelated companies, etc.).
 
-Contextual query construction (see `_build_retrieval_query`) runs in
+`generate_reply_stream` is a native async generator: retrieval (embedding +
+ChromaDB) runs in a worker thread via `asyncio.to_thread`, and the Gemini
+call itself uses the SDK's async streaming client (`_genai_client.aio`), so
+it never blocks the event loop and can be awaited directly by FastAPI
+(see main.py) instead of being driven through a threadpool adapter.
+`generate_reply` (the non-streaming entrypoint) remains synchronous.
+
+Contextual query construction (see `_build_retrieval_query`) is entirely
+local/deterministic — no LLM call, no pre-stream latency — and runs in
 priority order:
   1. A deterministic broad/open-ended overview fast path ("sab kuch batao",
-     "tell me about your bikes") — no LLM call, so it works correctly even
-     as the very first message in a session.
-  2. A self-contained-query fast path for plain English questions that
-     already name their own subject — no LLM call needed.
-  3. A Gemini rewrite call for anything else (non-English, vague follow-ups,
-     pronoun references) with an explicit precedence rule so a model named
-     in the *latest* message always wins over one named earlier in history.
-  4. A heuristic fallback (used only if the Gemini rewrite call itself
-     fails) that checks whether the current message already names its own
-     model before blending in recent history, so a topic switch doesn't get
-     diluted by a stale model from a previous turn.
+     "tell me about your bikes") — works correctly even as the very first
+     message in a session.
+  2. A deterministic multi-model price fast path ("sab ki prices", "all
+     models cost") that anchors retrieval on explicit model identifiers
+     instead of a vague "price cost" search string.
+  3. A self-contained-query fast path for plain English questions that
+     already name their own subject.
+  4. A local heuristic expansion for anything else (non-English, vague
+     follow-ups, pronoun references): checks whether the current message
+     already names its own model before blending in recent history from
+     `conversation_memory`, so a topic switch doesn't get diluted by a
+     stale model from a previous turn.
 """
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import os
 import re
@@ -50,6 +60,7 @@ from datetime import datetime
 from typing import List
 
 import chromadb
+import torch
 from google import genai
 from google.genai import types
 from sentence_transformers import SentenceTransformer
@@ -59,6 +70,15 @@ from logger import get_logger
 from memory import conversation_memory
 
 logger = get_logger(__name__)
+
+# Pin PyTorch's intra-op CPU thread pool. Without this, the embedding
+# model (SentenceTransformer, used on every retrieval call) defaults to
+# using all available cores, which under concurrent request load causes
+# thread contention with the rest of the process (and with the ASGI
+# worker pool) rather than actually speeding up any single embedding
+# call. 4 is a reasonable default for a single-node deployment; tune to
+# match the container's actual CPU allocation if that changes.
+torch.set_num_threads(4)
 
 # --- Module-level, one-time initialization. These are expensive to build
 # (model loading, DB connection), so we create them once at import time
@@ -133,8 +153,8 @@ def _ensure_ready() -> None:
 # this wrapper instead of calling the SDK directly. Only after all retries
 # are exhausted do we treat it as a true failure.
 
-_GEMINI_MAX_ATTEMPTS = 3          # 1 initial try + 2 retries
-_GEMINI_RETRY_BASE_DELAY = 0.6    # seconds; doubles each retry (0.6s, 1.2s)
+_GEMINI_MAX_ATTEMPTS = 2          # 1 initial try + 1 retry
+_GEMINI_RETRY_BASE_DELAY = 0.2    # seconds; doubles each retry (0.2s, 0.4s, ...)
 
 
 def _call_gemini_with_retry(*, model: str, contents, config: types.GenerateContentConfig):
@@ -180,6 +200,33 @@ def _call_gemini_stream_with_retry(*, model: str, contents, config: types.Genera
                     attempt, _GEMINI_MAX_ATTEMPTS, exc, delay,
                 )
                 time.sleep(delay)
+    assert last_exc is not None
+    raise last_exc
+
+
+async def _call_gemini_stream_with_retry_async(
+    *, model: str, contents, config: types.GenerateContentConfig
+):
+    """Async counterpart to _call_gemini_stream_with_retry, used by
+    generate_reply_stream. Calls the SDK's async client (`.aio`) so the
+    request/stream setup itself doesn't block the event loop, and awaits
+    asyncio.sleep instead of time.sleep between retries for the same
+    reason."""
+    last_exc: Exception | None = None
+    for attempt in range(1, _GEMINI_MAX_ATTEMPTS + 1):
+        try:
+            return await _genai_client.aio.models.generate_content_stream(
+                model=model, contents=contents, config=config
+            )
+        except Exception as exc:
+            last_exc = exc
+            if attempt < _GEMINI_MAX_ATTEMPTS:
+                delay = _GEMINI_RETRY_BASE_DELAY * (2 ** (attempt - 1))
+                logger.warning(
+                    "Gemini async stream call failed on attempt %d/%d (%s) — retrying in %.1fs",
+                    attempt, _GEMINI_MAX_ATTEMPTS, exc, delay,
+                )
+                await asyncio.sleep(delay)
     assert last_exc is not None
     raise last_exc
 
@@ -370,6 +417,20 @@ def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChun
     return chunks
 
 
+async def retrieve_context_async(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
+    """Async counterpart to retrieve_context, used inside the async
+    generate_reply_stream turn.
+
+    SentenceTransformer.encode() is CPU-bound and synchronous, and the
+    Chroma collection query right after it is blocking local I/O — running
+    either directly in a coroutine would stall the event loop and every
+    other concurrent request on this worker. asyncio.to_thread offloads
+    the whole (unchanged) sync retrieve_context call to a worker thread
+    instead of duplicating its logic here.
+    """
+    return await asyncio.to_thread(retrieve_context, query, top_k)
+
+
 def _is_price_or_multi_model_query(query: str) -> bool:
     """Check if the query is price-related or multi-model to bypass strict threshold drops."""
     if not query:
@@ -534,12 +595,17 @@ def _is_broad_overview_query(text: str) -> bool:
 def _build_retrieval_query(session_id: str, user_input: str, language_hint: str) -> str:
     """Return the string to embed and search ChromaDB with.
 
+    Fully local/deterministic — no LLM call, so this never adds pre-stream
+    latency and works identically whether Gemini is fast, slow, or down.
+
     Priority order:
-      1. Broad/open-ended overview fast path (deterministic, no LLM call).
-      2. Plain, self-contained English question fast path (no LLM call).
-      3. Gemini rewrite using conversation history, for anything else —
-         Urdu script, Roman Urdu, vague follow-ups, or pronoun references.
-      4. Heuristic fallback if the Gemini rewrite call itself fails.
+      1. Broad/open-ended overview fast path.
+      2. Multi-model price fast path ("sab ki prices", "all models cost").
+      3. Plain, self-contained English question fast path.
+      4. Local heuristic expansion for anything else — Urdu script, Roman
+         Urdu, vague follow-ups, or pronoun references — by blending the
+         current message with recent turns from `conversation_memory`
+         instead of asking an LLM to resolve/translate the reference.
     """
     normalized_input = _expand_model_shorthand(user_input)
     history_text = conversation_memory.get_history_as_text(session_id)
@@ -564,7 +630,7 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
     # Scoped strictly to queries that are BOTH price-related AND already
     # signal "all models" — a single-model or genuinely ambiguous price
     # question (no model named, no "all" signal) still falls through to
-    # the normal rewrite/clarification handling below. ---
+    # the normal local-heuristic/clarification handling below. ---
     if (
         not _MODEL_NAME_RE.search(user_input)
         and _is_price_query(user_input)
@@ -594,116 +660,50 @@ def _build_retrieval_query(session_id: str, user_input: str, language_hint: str)
     if not needs_rewrite:
         return normalized_input
 
-    # --- Path 3: Gemini rewrite ---
-    try:
-        _t0 = time.perf_counter()
-        response = _call_gemini_with_retry(
-            model=settings.GEMINI_MODEL,
-            contents=(
-                f"Conversation history:\n{history_text}\n\n"
-                f"User's latest message: {normalized_input}"
-            ),
-            config=types.GenerateContentConfig(
-                system_instruction=(
-                    "Convert the user's query into concise English search "
-                    "keywords for a vector database lookup. The knowledge base "
-                    "itself is written ENTIRELY in English, so no matter what "
-                    "language the user asked in, your output must always be "
-                    "English keywords — that's the whole point of this step.\n\n"
-                    "The query may be in English, Roman Urdu, or Urdu script, "
-                    "and it may be a short follow-up that only makes sense "
-                    "given the conversation history (a vague one like 'tell me "
-                    "more' / 'aur batao' / 'اور بھی بتاؤ', OR one using a "
-                    "pronoun like 'it' / 'its' / 'this' / 'us ki' / 'iski' / 'ye' / 'اس کی' / 'اس کا' "
-                    "that refers back to a model or topic named earlier in the "
-                    "history). In every such case, resolve the reference using "
-                    "the conversation history and name the actual model/topic "
-                    "explicitly in your output — never leave a pronoun "
-                    "unresolved and never output non-English words.\n\n"
-                    "PRECEDENCE RULE: if the user's latest message explicitly "
-                    "names a specific model (ELI 100, HLI 100, or SLI 100), that "
-                    "model is the subject of the query — even if the "
-                    "conversation history was previously about a different "
-                    "model. Do not keep referring to an older model once the "
-                    "user has moved on to a new one.\n\n"
-                    "PRICE / MULTI-MODEL RULE (important): if the question is "
-                    "about PRICE/cost/installments for 'all', 'sab', 'sabhi', "
-                    "'every model', or does not name one specific model at "
-                    "all, do NOT output a generic, vague search string like "
-                    "'price cost' — that drifts toward unrelated chunks that "
-                    "merely happen to mention a cost figure (e.g. a monthly "
-                    "electricity-cost estimate) instead of the actual bike "
-                    "pricing chunks. Instead, always spell out all three "
-                    "explicit model identifiers plus the topic: "
-                    "'ELI 100 HLI 100 SLI 100 price cost warranty retail'. "
-                    "Apply the same principle any time the query names "
-                    "multiple models or is otherwise ambiguous between them — "
-                    "prefer explicit model identifiers over generic nouns.\n\n"
-                    "Output ONLY the English search keywords — no quotes, no "
-                    "explanation, no answer to the question itself.\n\n"
-                    "Examples:\n"
-                    "History: assistant just described the ELI 100 | Latest message: \"what is the warrenty for it\" -> "
-                    "ELI 100 warranty details\n"
-                    "History: (none) | Latest message: \"ايلی 100 کی بيٹری "
-                    "وارنٹی کتنے سال کی ہے\" -> "
-                    "ELI 100 battery warranty duration years\n"
-                    "History: assistant just described the ELI 100 | Latest "
-                    "message: \"Us ki price kya hai?\" -> ELI 100 price cost\n"
-                    "History: assistant just described the HLI 100 | Latest "
-                    "message: \"ELI 100 ki price?\" -> ELI 100 price cost "
-                    "(the user switched topics — ignore the HLI 100 from "
-                    "history)\n"
-                    "History: assistant just described the ELI 100 | Latest "
-                    "message: \"aur bhi batao\" -> Hyder electric bike other "
-                    "models price and specifications\n"
-                    "History: (none) | Latest message: \"in sab ki prices "
-                    "kiya hain\" -> ELI 100 HLI 100 SLI 100 price cost "
-                    "warranty retail\n"
-                    "History: (none) | Latest message: \"tamam bikes ki "
-                    "keemat batao\" -> ELI 100 HLI 100 SLI 100 price cost "
-                    "warranty retail"
-                ),
-                temperature=0.0,
-                max_output_tokens=64,
-            ),
-        )
-        rewritten = (response.text or "").strip()
-        logger.info(
-            "[BENCHMARK] Query rewrite took %.1f ms",
-            (time.perf_counter() - _t0) * 1000,
-            extra={"session_id": session_id},
-        )
-        if rewritten:
-            logger.debug(
-                "Rewrote retrieval query: %r -> %r", user_input, rewritten,
-                extra={"session_id": session_id},
-            )
-            return rewritten
-    except Exception:
-        logger.exception(
-            "Query rewrite failed after retries; falling back to heuristic expansion",
-            extra={"session_id": session_id},
-        )
-
-    # --- Path 4: heuristic fallback (Gemini rewrite call failed) ---
-    # Same price/multi-model safeguard as fast path 1b above, so a Gemini
-    # outage doesn't silently regress this behavior back to a vague,
+    # --- Path 3: local heuristic expansion (no LLM call) ---
+    # Previously this branch made a synchronous Gemini call to rewrite the
+    # query into English search keywords before retrieval could even
+    # start — meaning the user saw zero output (no streaming, nothing)
+    # until that round trip finished, on top of the actual answer
+    # generation call afterward. That pre-stream latency is gone: instead
+    # of asking an LLM to resolve the reference, we fold the current
+    # message's own words together with the recent conversation history
+    # pulled straight from `conversation_memory` and let the embedding
+    # model's existing cross-lingual matching do the rest — the relevance
+    # threshold below (_RELEVANCE_DISTANCE_THRESHOLD) was already tuned to
+    # tolerate the wider distance this produces for non-English queries,
+    # since exact translation was never required for a good ChromaDB
+    # match, just enough shared signal to land near the right chunk.
+    #
+    # Same price/multi-model safeguard as fast path 1b above, so this
+    # local path doesn't regress that behavior back to a vague,
     # easily-confused "price cost" search string.
     if (
         not _MODEL_NAME_RE.search(normalized_input)
         and _is_price_query(normalized_input)
         and _is_multi_model_query(normalized_input)
     ):
+        logger.debug(
+            "Multi-model price heuristic for retrieval query: %r", user_input,
+            extra={"session_id": session_id},
+        )
         return _ALL_MODELS_PRICE_QUERY
 
     # If the current message already names its own model, don't dilute it
     # by blending in a (possibly different) model from recent history —
-    # that's the exact "clinging to a stale model" failure mode this fixes.
+    # that's the exact "clinging to a stale model" failure mode this
+    # guards against.
     recent_messages = conversation_memory.get_history(session_id)[-2:]
     if _MODEL_NAME_RE.search(normalized_input) or not recent_messages:
         return normalized_input
     recent_text = " ".join(m.content for m in recent_messages)
-    return f"{recent_text} {normalized_input}".strip()
+    combined_query = f"{recent_text} {normalized_input}".strip()
+    logger.debug(
+        "Locally expanded retrieval query with recent history: %r -> %r",
+        user_input, combined_query,
+        extra={"session_id": session_id},
+    )
+    return combined_query
 
 # --------------------------------------------------------------------------
 # Domain relevance check (used to decide what's worth logging as a
@@ -801,13 +801,16 @@ def _is_domain_relevant_query(query: str) -> bool:
 _UNANSWERED_LOG_PATH = "unanswered_queries.csv"
 _CSV_HEADER = ["Timestamp", "User_Query", "Language"]
 
-# Under FastAPI, generate_reply/generate_reply_stream calls run concurrently
-# on different threads (via iterate_in_threadpool for the streaming path).
-# Two threads both doing the "does file exist -> maybe write header -> write
-# row" sequence at once can interleave writes or double-write the header —
-# a single process-wide lock serializes it. This only covers this one
-# process; if you later run multiple worker processes against the same
-# file, add a file lock (e.g. `filelock`) or move logging to a shared store.
+# generate_reply_stream now runs directly on the event loop (async), so
+# concurrent calls interleave at await points rather than running on
+# separate threads — but generate_reply (the sync entrypoint) can still be
+# invoked from a worker thread by other callers, and log_unanswered_query
+# itself does blocking file I/O with no awaits in between. A single
+# process-wide lock keeps the "does file exist -> maybe write header ->
+# write row" sequence atomic regardless of which context calls it. This
+# only covers this one process; if you later run multiple worker processes
+# against the same file, add a file lock (e.g. `filelock`) or move logging
+# to a shared store.
 _unanswered_log_lock = threading.Lock()
 
 
@@ -1104,6 +1107,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
                 system_instruction=system_prompt,
                 temperature=settings.GEMINI_TEMPERATURE,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
         _elapsed_ms = (time.perf_counter() - _t0) * 1000
@@ -1211,11 +1215,26 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
 
     return reply_text, handoff_triggered
 
-def generate_reply_stream(session_id: str, user_input: str):
-    """Yields response text chunks in real-time as Gemini generates them."""
+async def generate_reply_stream(session_id: str, user_input: str):
+    """Yields response text chunks in real-time as Gemini generates them.
+
+    Native async generator: query prep is local/cheap (unchanged), the
+    embedding + Chroma retrieval runs in a worker thread via
+    asyncio.to_thread (see retrieve_context_async) so it doesn't block the
+    event loop, and the Gemini call goes through the SDK's async streaming
+    client (_genai_client.aio) via _call_gemini_stream_with_retry_async.
+    Nothing in this function does blocking work directly on the event
+    loop thread any more, so main.py can `async for` over this generator
+    directly instead of driving it through iterate_in_threadpool.
+    """
     _ensure_ready()
-    language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
+    language_hint = detect_language(user_input)
+
+    # [PERF] (a) Query preparation time: language detection + the fully
+    # local retrieval-query construction (see _build_retrieval_query) —
+    # no LLM call lives in this span any more, so it should be near-zero.
+    _t_query_prep_start = time.perf_counter()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
 
     if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query):
@@ -1226,7 +1245,22 @@ def generate_reply_stream(session_id: str, user_input: str):
         if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query) 
         else None
     )
-    chunks = retrieve_context(retrieval_query, top_k=retrieval_top_k)
+    logger.info(
+        "[PERF] Query preparation took %.1f ms",
+        (time.perf_counter() - _t_query_prep_start) * 1000,
+        extra={"session_id": session_id},
+    )
+
+    # [PERF] (b) Vector retrieval time: embedding the query + the ChromaDB
+    # query itself (retrieve_context also logs the ChromaDB-only portion
+    # separately under [BENCHMARK] Vector DB query, preserved below).
+    _t_retrieval_start = time.perf_counter()
+    chunks = await retrieve_context_async(retrieval_query, top_k=retrieval_top_k)
+    logger.info(
+        "[PERF] Vector retrieval (embedding + ChromaDB query) took %.1f ms",
+        (time.perf_counter() - _t_retrieval_start) * 1000,
+        extra={"session_id": session_id},
+    )
     relevant = _has_relevant_context(chunks, query=retrieval_query)
 
     context_block = (
@@ -1241,21 +1275,33 @@ def generate_reply_stream(session_id: str, user_input: str):
 
     api_failure = False
     full_reply = ""
+    _ttft_logged = False
 
     try:
         _t0 = time.perf_counter()
-        response_stream = _call_gemini_stream_with_retry(
+        response_stream = await _call_gemini_stream_with_retry_async(
             model=settings.GEMINI_MODEL,
             contents=user_turn,
             config=types.GenerateContentConfig(
                 system_instruction=system_prompt,
                 temperature=settings.GEMINI_TEMPERATURE,
                 max_output_tokens=settings.GEMINI_MAX_OUTPUT_TOKENS,
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
             ),
         )
 
-        for chunk in response_stream:
+        async for chunk in response_stream:
             if chunk.text:
+                if not _ttft_logged:
+                    # [PERF] (c) Time-to-first-token: elapsed time from
+                    # issuing the stream request to the first non-empty
+                    # text chunk actually arriving from Gemini.
+                    logger.info(
+                        "[PERF] Time-to-first-token (TTFT) was %.1f ms",
+                        (time.perf_counter() - _t0) * 1000,
+                        extra={"session_id": session_id},
+                    )
+                    _ttft_logged = True
                 full_reply += chunk.text
                 yield chunk.text
 
@@ -1304,6 +1350,13 @@ def generate_reply_stream(session_id: str, user_input: str):
         (time.perf_counter() - _turn_start) * 1000,
         extra={"session_id": session_id},
     )
+    # [PERF] (d) Total turn duration: query prep + retrieval + full Gemini
+    # stream (through TTFT and beyond) + memory bookkeeping, end to end.
+    logger.info(
+        "[PERF] Total turn duration was %.1f ms",
+        (time.perf_counter() - _turn_start) * 1000,
+        extra={"session_id": session_id},
+    )
     
 # --------------------------------------------------------------------------
 # Voice input support
@@ -1340,7 +1393,9 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
                     "marks, and no Devanagari characters."
                 ),
             ],
-            config=types.GenerateContentConfig(),
+            config=types.GenerateContentConfig(
+                thinking_config=types.ThinkingConfig(thinking_budget=0),
+            ),
         )
         logger.info(
             "[BENCHMARK] Audio transcription took %.1f ms",

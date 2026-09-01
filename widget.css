@@ -1,0 +1,276 @@
+/* ==========================================================================
+   Hyder Assistant — Chat Widget Stylesheet
+   All classes are scoped with the `hyder-chat-` prefix to avoid leaking
+   styles into (or being overridden by) the host page.
+   ========================================================================== */
+
+.hyder-chat-widget {
+  --hyder-primary: #2563eb;
+  --hyder-primary-dark: #1d4ed8;
+  --hyder-bg: #ffffff;
+  --hyder-text: #1f2937;
+  --hyder-border: #e5e7eb;
+  --hyder-bubble-bot: #f3f4f6;
+  --hyder-bubble-user: #2563eb;
+  --hyder-bubble-user-text: #ffffff;
+  --hyder-radius: 14px;
+  --hyder-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Noto Nastaliq Urdu", Tahoma, Arial, sans-serif;
+
+  position: fixed;
+  z-index: 2147483000;
+  bottom: 20px;
+  right: 20px;
+  font-family: var(--hyder-font);
+  box-sizing: border-box;
+}
+
+.hyder-chat-widget *,
+.hyder-chat-widget *::before,
+.hyder-chat-widget *::after {
+  box-sizing: border-box;
+}
+
+/* ---------- Floating toggle bubble ---------- */
+.hyder-chat-bubble-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: none;
+  background: var(--hyder-primary);
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.hyder-chat-bubble-btn:hover {
+  background: var(--hyder-primary-dark);
+  transform: scale(1.05);
+}
+
+.hyder-chat-bubble-btn svg {
+  width: 26px;
+  height: 26px;
+  fill: currentColor;
+}
+
+/* ---------- Chat window ---------- */
+.hyder-chat-window {
+  position: absolute;
+  bottom: 72px;
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 40px);
+  height: 520px;
+  max-height: calc(100vh - 120px);
+  background: var(--hyder-bg);
+  border-radius: var(--hyder-radius);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(12px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.hyder-chat-window.hyder-chat-open {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
+/* ---------- Header ---------- */
+.hyder-chat-header {
+  background: var(--hyder-primary);
+  color: #fff;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.hyder-chat-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0;
+  direction: auto;
+  unicode-bidi: plaintext;
+}
+
+.hyder-chat-close-btn {
+  background: transparent;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  padding: 2px 6px;
+  border-radius: 6px;
+  opacity: 0.85;
+}
+
+.hyder-chat-close-btn:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* ---------- Message container ---------- */
+.hyder-chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--hyder-bg);
+}
+
+.hyder-chat-messages::-webkit-scrollbar {
+  width: 6px;
+}
+
+.hyder-chat-messages::-webkit-scrollbar-thumb {
+  background: var(--hyder-border);
+  border-radius: 4px;
+}
+
+/* ---------- Message bubbles ---------- */
+.hyder-chat-msg {
+  max-width: 82%;
+  padding: 9px 13px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.45;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+
+  /* Requirement: auto-direction so Urdu/Roman Urdu align RTL,
+     English stays LTR, per-message. */
+  direction: auto;
+  unicode-bidi: plaintext;
+}
+
+.hyder-chat-msg strong {
+  font-weight: 700;
+}
+
+.hyder-chat-msg ul {
+  margin: 6px 0;
+  padding-inline-start: 20px;
+}
+
+.hyder-chat-msg-bot {
+  align-self: flex-start;
+  background: var(--hyder-bubble-bot);
+  color: var(--hyder-text);
+  border-bottom-left-radius: 4px;
+}
+
+.hyder-chat-msg-user {
+  align-self: flex-end;
+  background: var(--hyder-bubble-user);
+  color: var(--hyder-bubble-user-text);
+  border-bottom-right-radius: 4px;
+}
+
+.hyder-chat-msg-typing {
+  align-self: flex-start;
+  display: flex;
+  gap: 4px;
+  padding: 12px 14px;
+}
+
+.hyder-chat-msg-typing span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #9ca3af;
+  animation: hyder-chat-blink 1.2s infinite ease-in-out;
+}
+
+.hyder-chat-msg-typing span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.hyder-chat-msg-typing span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes hyder-chat-blink {
+  0%, 80%, 100% { opacity: 0.25; }
+  40% { opacity: 1; }
+}
+
+/* ---------- Input row ---------- */
+.hyder-chat-input-row {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  border-top: 1px solid var(--hyder-border);
+  background: var(--hyder-bg);
+}
+
+.hyder-chat-input {
+  flex: 1;
+  border: 1px solid var(--hyder-border);
+  border-radius: 20px;
+  padding: 9px 14px;
+  font-size: 14px;
+  outline: none;
+  resize: none;
+  max-height: 90px;
+  font-family: inherit;
+  direction: auto;
+  unicode-bidi: plaintext;
+}
+
+.hyder-chat-input:focus {
+  border-color: var(--hyder-primary);
+}
+
+.hyder-chat-send-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--hyder-primary);
+  color: #fff;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease;
+}
+
+.hyder-chat-send-btn:hover {
+  background: var(--hyder-primary-dark);
+}
+
+.hyder-chat-send-btn:disabled {
+  background: #93b4f0;
+  cursor: not-allowed;
+}
+
+.hyder-chat-send-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+/* ---------- Small screens ---------- */
+@media (max-width: 480px) {
+  .hyder-chat-window {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 110px);
+    right: -8px;
+  }
+}
