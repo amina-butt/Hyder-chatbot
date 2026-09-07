@@ -266,6 +266,80 @@
   fill: currentColor;
 }
 
+/* ---------- Mic button ---------- */
+.hyder-chat-mic-btn {
+  flex-shrink: 0;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: none;
+  background: var(--hyder-bubble-bot);
+  color: var(--hyder-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.hyder-chat-mic-btn:hover {
+  background: #e5e7eb;
+}
+
+.hyder-chat-mic-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hyder-chat-mic-btn svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+}
+
+/* Active/recording state: solid red with a pulsing halo so it reads as
+   "live" at a glance, not just a color change. */
+.hyder-chat-mic-active {
+  background: #ef4444;
+  color: #fff;
+  animation: hyder-chat-mic-pulse 1.4s infinite;
+}
+
+.hyder-chat-mic-active:hover {
+  background: #dc2626;
+}
+
+@keyframes hyder-chat-mic-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.55);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+  }
+}
+
+/* Small recording-time label shown next to the mic while active */
+.hyder-chat-recording-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #ef4444;
+  padding: 0 4px;
+  white-space: nowrap;
+}
+
+.hyder-chat-recording-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ef4444;
+  animation: hyder-chat-blink 1.2s infinite ease-in-out;
+}
+
 /* ---------- Small screens ---------- */
 @media (max-width: 480px) {
   .hyder-chat-window {

@@ -1380,15 +1380,13 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
             contents=[
                 types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
                 (
-                    "Transcribe this audio exactly as spoken. If the speaker is "
-                    "speaking Urdu OR Hindustani/Hindi (the same spoken language "
-                    "as Urdu, just sometimes rendered in Hindi script), transcribe "
-                    "it in URDU SCRIPT — never in Devanagari/Hindi script, even if "
-                    "that would be the more common way to write what was said. If "
-                    "Roman Urdu (Urdu written with English letters), transcribe in "
-                    "Roman Urdu. If English, transcribe in English. Output ONLY "
-                    "the transcription text — no labels, commentary, or quotation "
-                    "marks, and no Devanagari characters."
+                            "Transcribe the following audio accurately. "
+                            "CRITICAL INSTRUCTION: If the spoken language is Urdu, Hindi, or Hindustani, "
+                            "you MUST transcribe it strictly using the Urdu script (Perso-Arabic script, e.g., 'کیا تم...'). "
+                            "Do NOT output Devanagari or Hindi characters under any circumstances. "
+                            "If Roman Urdu, transcribe in Roman Urdu using English letters. "
+                            "If English, transcribe in English. "
+                            "Output ONLY the raw transcription text without any labels, notes, or extra formatting."
                 ),
             ],
             config=types.GenerateContentConfig(),
@@ -1401,3 +1399,16 @@ def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
     except Exception:
         logger.exception("Audio transcription failed after retries", extra={"session_id": "-"})
         return ""
+
+async def transcribe_audio_async(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
+    """Async wrapper around transcribe_audio.
+
+    transcribe_audio calls the synchronous Gemini SDK client
+    (_call_gemini_with_retry -> _genai_client.models.generate_content),
+    which is a blocking network call. Offloading it to a worker thread via
+    asyncio.to_thread keeps it off the event loop, the same way
+    retrieve_context_async wraps the other blocking (embedding/ChromaDB)
+    work elsewhere in this module, so an in-flight transcription request
+    can't stall other concurrent requests being served by main.py.
+    """
+    return await asyncio.to_thread(transcribe_audio, audio_bytes, mime_type)

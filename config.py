@@ -63,6 +63,16 @@ class Settings(BaseSettings):
     SESSION_TTL_HOURS: float = 6.0  # evict a session after this long with no activity
     MAX_SESSIONS: int = 10000       # hard cap on concurrent sessions held in memory
 
+    # --- Audio Processing ---
+    MAX_AUDIO_FILE_SIZE_MB: int = 10
+    ALLOWED_AUDIO_MIME_TYPES: list[str] = [
+        "audio/webm",
+        "audio/wav",
+        "audio/mp3",
+        "audio/ogg",
+        "audio/m4a",
+    ]
+    
     # --- Logging ---
     LOG_DIR: str = "logs"
     LOG_FILE_NAME: str = "app.log"

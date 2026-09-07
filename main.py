@@ -26,7 +26,7 @@ if sys.platform == "win32":
 load_dotenv()
 
 import uvicorn
-from fastapi import Depends, FastAPI, Header, HTTPException, Request, status
+from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -38,7 +38,12 @@ from sse_starlette.sse import EventSourceResponse
 
 from config import settings
 from logger import get_logger
-from rag_engine import generate_reply_stream, is_ready
+# NOTE: transcribe_audio_async is defined in rag_engine.py in this patch.
+# Merge that function into your actual rag_engine.py (it's appended right
+# after the existing transcribe_audio) so this import resolves — the split
+# into a "_2" file here is only an artifact of how this change was handed
+# back to you.
+from rag_engine import generate_reply_stream, is_ready, transcribe_audio_async
 
 logger = get_logger(__name__)
 
@@ -176,6 +181,15 @@ class ChatRequest(BaseModel):
 
 
 # --------------------------------------------------------------------------
+# Voice input constraints
+# --------------------------------------------------------------------------
+# Bounds the audio upload so a client can't stream an arbitrarily large file
+# through an unauthenticated-in-dev endpoint. 10 MB comfortably covers a
+# multi-minute webm/opus voice note at browser MediaRecorder bitrates.
+MAX_AUDIO_BYTES = 10 * 1024 * 1024
+
+
+# --------------------------------------------------------------------------
 # Health check
 # --------------------------------------------------------------------------
 # Real readiness check: rag_engine.is_ready() reflects whether the
@@ -243,6 +257,91 @@ async def chat_stream(request: Request, payload: ChatRequest):
             # Tells nginx-style reverse proxies not to buffer the response,
             # which would otherwise hold chunks until a buffer threshold
             # is hit and defeat the point of streaming.
+            "X-Accel-Buffering": "no",
+        },
+    )
+
+
+# --------------------------------------------------------------------------
+# Voice input endpoint
+# --------------------------------------------------------------------------
+# multipart/form-data (not JSON) since we're receiving an audio file
+# alongside session_id, so this is a separate endpoint from /api/chat/stream
+# rather than a variant of ChatRequest.
+async def _transcript_event_generator(request: Request, session_id: str, transcript: str):
+    """Same shape as _event_generator's stream, but starts with a
+    "transcript" SSE event carrying the transcribed text, so the widget can
+    render the user's own bubble (it never typed anything, so it doesn't
+    otherwise know what was "said") before the assistant's reply starts
+    streaming in.
+    """
+    yield {
+        "event": "transcript",
+        "data": json.dumps({"text": transcript}, ensure_ascii=False),
+    }
+    async for event in _event_generator(request, session_id, transcript):
+        yield event
+
+
+@app.post("/api/chat/audio", dependencies=[Depends(verify_api_key)])
+@limiter.limit("10/minute")
+async def chat_audio(
+    request: Request,
+    session_id: str = Form(..., min_length=1),
+    file: UploadFile = File(...),
+):
+    audio_bytes = await file.read()
+
+    if not audio_bytes:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Uploaded audio file is empty.")
+
+    if len(audio_bytes) > MAX_AUDIO_BYTES:
+        raise HTTPException(
+            status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+            detail=f"Audio file exceeds the {MAX_AUDIO_BYTES // (1024 * 1024)} MB limit.",
+        )
+
+    mime_type = file.content_type or "audio/webm"
+
+    try:
+        transcript = await transcribe_audio_async(audio_bytes, mime_type)
+    except Exception:
+        logger.exception("Audio transcription failed", extra={"session_id": session_id})
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Something went wrong while transcribing the audio.",
+        )
+
+    if not transcript.strip():
+        # Not a server error — the audio just wasn't understandable speech
+        # (silence, noise, unsupported language). SSE keeps this endpoint's
+        # response shape consistent with /api/chat/stream (the widget's SSE
+        # handler doesn't need a separate code path for a JSON error body).
+        async def _empty_transcript_stream():
+            yield {
+                "event": "error",
+                "data": json.dumps(
+                    {
+                        "error": "empty_transcript",
+                        "message": "Sorry, I couldn't make out what you said. Could you try again?",
+                    }
+                ),
+            }
+
+        return EventSourceResponse(
+            _empty_transcript_stream(),
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",
+            },
+        )
+
+    return EventSourceResponse(
+        _transcript_event_generator(request, session_id, transcript),
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
             "X-Accel-Buffering": "no",
         },
     )

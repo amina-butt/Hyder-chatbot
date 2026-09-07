@@ -14,7 +14,9 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
         g++ \
+        ffmpeg \
     && rm -rf /var/lib/apt/lists/*
+
 
 # ---- Python dependencies (cached separately from app code) ----
 COPY requirements.txt .
