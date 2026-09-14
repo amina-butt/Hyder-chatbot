@@ -33,7 +33,7 @@ class Settings(BaseSettings):
     # rag_engine._response_was_truncated / _trim_to_last_complete_sentence
     # will kick in more often as a result; watch for cut-off replies and
     # raise this back up if that becomes noticeable.
-    GEMINI_MAX_OUTPUT_TOKENS: int = 510
+    GEMINI_MAX_OUTPUT_TOKENS: int = 1500
     # Per-HTTP-call timeout to Gemini, in seconds. Bounds a stalled/hanging
     # connection — without this, a call that never returns (rather than
     # erroring) can block a threadpool slot indefinitely.
@@ -52,10 +52,15 @@ class Settings(BaseSettings):
     # the vector dimensions happen to match.
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
+    # --- Chatwoot Integration ---
+    CHATWOOT_BASE_URL: str = ""
+    CHATWOOT_API_TOKEN: str = ""
+    CHATWOOT_ACCOUNT_ID: str = ""
+
     # --- Knowledge base ingestion ---
     DATA_FILE_PATH: str = "data/hyder_bikes.txt"
-    CHUNK_SIZE: int = 1500          # characters per chunk
-    CHUNK_OVERLAP: int = 200        # overlap between consecutive chunks
+    CHUNK_SIZE: int = 500          # characters per chunk
+    CHUNK_OVERLAP: int = 80        # overlap between consecutive chunks
     TOP_K_RESULTS: int = 4         # number of chunks retrieved per query
 
     # --- Conversation memory ---

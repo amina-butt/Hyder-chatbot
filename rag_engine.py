@@ -68,6 +68,7 @@ from sentence_transformers import SentenceTransformer
 from config import settings
 from logger import get_logger
 from memory import conversation_memory
+from faq_router import faq_router
 
 logger = get_logger(__name__)
 
@@ -183,31 +184,10 @@ def _call_gemini_with_retry(*, model: str, contents, config: types.GenerateConte
     assert last_exc is not None
     raise last_exc
 
-def _call_gemini_stream_with_retry(*, model: str, contents, config: types.GenerateContentConfig):
-    """Call Gemini's generate_content_stream with a bounded retry/backoff loop."""
-    last_exc: Exception | None = None
-    for attempt in range(1, _GEMINI_MAX_ATTEMPTS + 1):
-        try:
-            return _genai_client.models.generate_content_stream(
-                model=model, contents=contents, config=config
-            )
-        except Exception as exc:
-            last_exc = exc
-            if attempt < _GEMINI_MAX_ATTEMPTS:
-                delay = _GEMINI_RETRY_BASE_DELAY * (2 ** (attempt - 1))
-                logger.warning(
-                    "Gemini stream call failed on attempt %d/%d (%s) — retrying in %.1fs",
-                    attempt, _GEMINI_MAX_ATTEMPTS, exc, delay,
-                )
-                time.sleep(delay)
-    assert last_exc is not None
-    raise last_exc
-
-
 async def _call_gemini_stream_with_retry_async(
     *, model: str, contents, config: types.GenerateContentConfig
 ):
-    """Async counterpart to _call_gemini_stream_with_retry, used by
+    """Async counterpart to _call_gemini_with_retry, used by
     generate_reply_stream. Calls the SDK's async client (`.aio`) so the
     request/stream setup itself doesn't block the event loop, and awaits
     asyncio.sleep instead of time.sleep between retries for the same
@@ -242,8 +222,14 @@ _URDU_SCRIPT_RE = re.compile(r"[\u0600-\u06FF]")
 # writing systems). Per the language-handling rules, this must NEVER be
 # echoed back to the user — it's mapped straight to the "urdu" hint below
 # so the reply always comes back in Urdu script.
-_DEVANAGARI_SCRIPT_RE = re.compile(r"[\u0900-\u097F]")
+_DEVANAGARI_FULL_RE = re.compile(r"[\u0900-\u097F\uA8E0-\uA8FF]+")
 
+def strip_hindi_characters(text: str) -> str:
+    """Removes all Hindi/Devanagari characters and cleans up double spaces."""
+    if not text:
+        return text
+    cleaned = _DEVANAGARI_FULL_RE.sub("", text)
+    return re.sub(r"\s+", " ", cleaned).strip()
 # A small set of high-frequency Roman Urdu tokens. This is a lightweight
 # heuristic *hint* for the LLM, not the sole source of truth — the system
 # prompt also instructs Gemini to independently verify and mirror the
@@ -271,7 +257,7 @@ _ENGLISH_STOPWORDS = {
 }
 
 def detect_language(text: str) -> str:
-    if _URDU_SCRIPT_RE.search(text) or _DEVANAGARI_SCRIPT_RE.search(text):
+    if _URDU_SCRIPT_RE.search(text) or _DEVANAGARI_FULL_RE.search(text):
         return "urdu"
 
     tokens = set(re.findall(r"[a-zA-Z]+", text.lower()))
@@ -435,14 +421,7 @@ def _is_price_or_multi_model_query(query: str) -> bool:
     """Check if the query is price-related or multi-model to bypass strict threshold drops."""
     if not query:
         return False
-    query_lower = query.lower()
-    price_keywords = {"price", "prices", "cost", "costs", "pkr", "rupees", "rate", "rates", "kitne", "kitna", "worth", "keemat", "qeemat"}
-    has_price_kw = any(kw in query_lower for kw in price_keywords)
-    
-    models_found = len(re.findall(r"\b(eli|hli|sli)\b", query_lower))
-    is_multi_model = models_found > 1 or any(kw in query_lower for kw in ["all", "compare", "sab", "sari", "saray", "tamam"])
-    
-    return has_price_kw or is_multi_model
+    return _is_price_query(query) or _is_multi_model_query(query)
 
 
 def _has_relevant_context(chunks: List[RetrievedChunk], query: str = "") -> bool:
@@ -795,6 +774,101 @@ def _is_domain_relevant_query(query: str) -> bool:
 
 
 # --------------------------------------------------------------------------
+# Chatwoot / human-in-the-loop escalation detection
+# --------------------------------------------------------------------------
+# Distinct from `_is_explicit_human_handoff_request` above (which only
+# decides whether the *contact footer* gets appended to an otherwise
+# normal AI-generated reply in the chat-widget flow). This is a stricter,
+# CATEGORIZED check used exclusively by the Chatwoot integration (see
+# main.py's `_handle_chatwoot_message`) to decide when a conversation
+# should be pulled OUT of the AI pipeline entirely — no FAQ router, no
+# ChromaDB, no Gemini — and hand it to a human, with a specific reason
+# staff can act on immediately from the private note.
+
+_ESCALATION_HUMAN_AGENT_PATTERNS = [
+    # English
+    r"\bhuman\b", r"\bagent\b", r"\breal person\b",
+    r"\btalk to (someone|a person|a human|an agent|support|sales)\b",
+    r"\bspeak (to|with) (someone|a person|a human|an agent|support|sales)\b",
+    r"\bcustomer (service|support)\b", r"\bcall (me|back)\b",
+    r"\bcontact (number|details|info)\b", r"\bphone number\b",
+    r"\bsupport number\b", r"\bhelpline\b",
+    # Roman Urdu
+    r"\binsan se baat\b", r"\bbanda se baat\b", r"\bagent se baat\b",
+    r"\bnumber (do|dedo|chahiye|batao)\b",
+    r"\bcontact (karo|krwao|chahiye)\b", r"\brep(resentative)? se baat\b",
+    # Urdu script
+    r"انسان سے بات", r"نمبر دیں", r"ایجنٹ سے بات",
+]
+_escalation_human_agent_pattern = re.compile(
+    "|".join(_ESCALATION_HUMAN_AGENT_PATTERNS), re.IGNORECASE
+)
+
+_ESCALATION_TEST_RIDE_PATTERNS = [
+    r"\bbook(ing)? (a )?(test ride|appointment|bike)\b",
+    r"\bschedule a (test ride|visit|appointment)\b",
+    r"\bplace an order\b", r"\bhow do I book\b",
+    r"\btest drive\b",
+    r"\bbooking (karni|krni) hai\b", r"\btest ride book\b",
+    r"بکنگ کرنی ہے",
+]
+_escalation_test_ride_pattern = re.compile(
+    "|".join(_ESCALATION_TEST_RIDE_PATTERNS), re.IGNORECASE
+)
+
+_ESCALATION_DISCOUNT_PATTERNS = [
+    r"\bdiscount\b", r"\bnegotiate\b", r"\bnegotiation\b", r"\bbargain\b",
+    r"\blower (the )?price\b", r"\breduce (the )?price\b",
+    r"\bbest price\b", r"\bfinal price\b", r"\bany discount\b",
+    r"\bkam (ho|hoga|ho sakta|kar do|karo|kardo)\b", r"\bsasta kar\b",
+    r"\bdiscount (do|dedo|milega|hai)\b",
+    r"رعایت", r"ڈسکاؤنٹ",
+]
+_escalation_discount_pattern = re.compile(
+    "|".join(_ESCALATION_DISCOUNT_PATTERNS), re.IGNORECASE
+)
+
+_ESCALATION_COMPLAINT_PATTERNS = [
+    r"\bcomplaint\b", r"\bcomplain\b", r"\bnot working\b", r"\bbroken\b",
+    r"\bfaulty\b", r"\bdamaged\b", r"\bdefective\b", r"\brefund\b",
+    r"\breturn (the|my) (bike|order)\b", r"\bkharab\b", r"\bshikayat\b",
+    r"خراب", r"شکایت",
+]
+_escalation_complaint_pattern = re.compile(
+    "|".join(_ESCALATION_COMPLAINT_PATTERNS), re.IGNORECASE
+)
+
+
+def detect_escalation_trigger(user_input: str) -> tuple[bool, str | None]:
+    """Categorized check for whether a message should bypass the AI
+    pipeline entirely and go straight to a human. Used only by the
+    Chatwoot integration in main.py.
+
+    Returns (True, reason) for the first matching category, checked in
+    this priority order:
+      1. "human_agent"          — explicitly wants a person/support/contact.
+      2. "test_ride_booking"    — wants to book a test ride/appointment/order.
+      3. "discount_negotiation" — asking for a discount or to negotiate price.
+      4. "complaint"            — reporting a problem, fault, or wants a refund.
+
+    Returns (False, None) for an ordinary informational question — the
+    caller should run that through the normal FAQ router / ChromaDB /
+    Gemini pipeline (`generate_reply`) instead.
+    """
+    if not user_input:
+        return False, None
+    if _escalation_human_agent_pattern.search(user_input):
+        return True, "human_agent"
+    if _escalation_test_ride_pattern.search(user_input):
+        return True, "test_ride_booking"
+    if _escalation_discount_pattern.search(user_input):
+        return True, "discount_negotiation"
+    if _escalation_complaint_pattern.search(user_input):
+        return True, "complaint"
+    return False, None
+
+
+# --------------------------------------------------------------------------
 # Knowledge gap logging
 # --------------------------------------------------------------------------
 
@@ -1069,9 +1143,42 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     Returns:
         (reply_text, handoff_triggered)
     """
-    _ensure_ready()
-    language_hint = detect_language(user_input)
     _turn_start = time.perf_counter()
+    language_hint = detect_language(user_input)
+
+    # ----------------------------------------------------------------
+    # LOCAL FAQ ROUTER INTERCEPT (zero-cost, zero-latency short circuit)
+    # ----------------------------------------------------------------
+    # Deliberately runs BEFORE _ensure_ready(): FAQRouter has no
+    # dependency on the embedding model, ChromaDB, or the Gemini client,
+    # so a confident local match can (and should) be served even if the
+    # heavier RAG stack failed to initialize. See faq_router.py for the
+    # full guardrail philosophy -- `match` is None for anything short of
+    # an unambiguous, single-intent hit, which is by far the common case
+    # and simply falls through to the existing pipeline below.
+    faq_match = faq_router.match(user_input, language_hint=language_hint)
+    if faq_match is not None:
+        logger.info(
+            "Served via local FAQ router (0 API tokens used) | Intent: %s",
+            faq_match.intent_key,
+            extra={"session_id": session_id},
+        )
+        # Record both turns in memory so follow-up questions ("what about
+        # warranty on that one?") still have full context, exactly as if
+        # the reply had come from Gemini.
+        conversation_memory.add_message(session_id, "user", user_input)
+        conversation_memory.add_message(session_id, "assistant", faq_match.response_text)
+        logger.info(
+            "[BENCHMARK] Total generate_reply turn (FAQ router short-circuit) took %.1f ms",
+            (time.perf_counter() - _turn_start) * 1000,
+            extra={"session_id": session_id},
+        )
+        # A served FAQ match is, by definition, a confident answer --
+        # never a case that needs a human in the loop.
+        return faq_match.response_text, False
+
+    # ---- Existing full RAG pipeline (unchanged below this point) ----
+    _ensure_ready()
     retrieval_query = _build_retrieval_query(session_id, user_input, language_hint)
 
     if _is_multi_model_query(user_input) or _is_multi_model_query(retrieval_query):
@@ -1195,6 +1302,10 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         log_unanswered_query(user_input, language_hint)
 
     # Update sliding-window memory with this exchange
+    # Clean any residual Hindi characters from final reply
+    reply_text = strip_hindi_characters(reply_text)
+
+    # Update sliding-window memory with this exchange
     conversation_memory.add_message(session_id, "user", user_input)
     conversation_memory.add_message(session_id, "assistant", reply_text)
 
@@ -1204,11 +1315,6 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         relevant,
         api_failure,
         handoff_triggered,
-        extra={"session_id": session_id},
-    )
-    logger.info(
-        "[BENCHMARK] Total generate_reply turn took %.1f ms",
-        (time.perf_counter() - _turn_start) * 1000,
         extra={"session_id": session_id},
     )
 
@@ -1226,9 +1332,60 @@ async def generate_reply_stream(session_id: str, user_input: str):
     loop thread any more, so main.py can `async for` over this generator
     directly instead of driving it through iterate_in_threadpool.
     """
-    _ensure_ready()
     _turn_start = time.perf_counter()
     language_hint = detect_language(user_input)
+
+    # ----------------------------------------------------------------
+    # LOCAL FAQ ROUTER INTERCEPT (zero-cost, zero-latency short circuit)
+    # ----------------------------------------------------------------
+    # This is the primary interception point requested for production:
+    # every incoming message is checked against the local, deterministic
+    # FAQRouter BEFORE any ChromaDB vector search or Gemini streaming
+    # call is made. Deliberately placed BEFORE _ensure_ready() too --
+    # FAQRouter has no dependency on the embedding model, ChromaDB, or
+    # the Gemini client, so a confident local match should still be
+    # served even if that heavier stack failed to initialize (e.g. a
+    # bad GEMINI_API_KEY shouldn't take down "what are your hours?").
+    #
+    # faq_router.match() returns None for anything short of a confident,
+    # unambiguous, single-intent match (see faq_router.py's guardrail
+    # philosophy) -- that is the common case, and execution simply falls
+    # through to the existing retrieval + Gemini streaming pipeline
+    # below, completely unchanged.
+    faq_match = faq_router.match(user_input, language_hint=language_hint)
+    if faq_match is not None:
+        logger.info(
+            "Served via local FAQ router (0 API tokens used) | Intent: %s",
+            faq_match.intent_key,
+            extra={"session_id": session_id},
+        )
+
+        # Stream the canned answer back in the exact same shape as a
+        # real Gemini-generated reply: main.py's _event_generator just
+        # iterates chunks via `async for`, so a single-chunk yield here
+        # is indistinguishable from a normal (very fast) stream to the
+        # SSE client -- no special-casing needed on the main.py side.
+        yield faq_match.response_text
+
+        # Record both the user prompt and the served template in
+        # conversation_memory, exactly as the full pipeline does below,
+        # so a follow-up turn ("what about warranty on that one?") still
+        # has full context even though this turn never touched Gemini.
+        conversation_memory.add_message(session_id, "user", user_input)
+        conversation_memory.add_message(session_id, "assistant", faq_match.response_text)
+
+        logger.info(
+            "[PERF] Total generate_reply_stream turn (FAQ router short-circuit) took %.1f ms",
+            (time.perf_counter() - _turn_start) * 1000,
+            extra={"session_id": session_id},
+        )
+
+        # Immediately return -- prevents ChromaDB vector search and the
+        # Gemini API call from ever running for this turn.
+        return
+
+    # ---- Existing full RAG pipeline (unchanged below this point) ----
+    _ensure_ready()
 
     # [PERF] (a) Query preparation time: language detection + the fully
     # local retrieval-query construction (see _build_retrieval_query) —
@@ -1290,18 +1447,17 @@ async def generate_reply_stream(session_id: str, user_input: str):
 
         async for chunk in response_stream:
             if chunk.text:
-                if not _ttft_logged:
-                    # [PERF] (c) Time-to-first-token: elapsed time from
-                    # issuing the stream request to the first non-empty
-                    # text chunk actually arriving from Gemini.
-                    logger.info(
-                        "[PERF] Time-to-first-token (TTFT) was %.1f ms",
-                        (time.perf_counter() - _t0) * 1000,
-                        extra={"session_id": session_id},
-                    )
-                    _ttft_logged = True
-                full_reply += chunk.text
-                yield chunk.text
+                clean_chunk = strip_hindi_characters(chunk.text)
+                if clean_chunk:
+                    if not _ttft_logged:
+                        logger.info(
+                            "[PERF] Time-to-first-token (TTFT) was %.1f ms",
+                            (time.perf_counter() - _t0) * 1000,
+                            extra={"session_id": session_id},
+                        )
+                        _ttft_logged = True
+                    full_reply += clean_chunk
+                    yield clean_chunk
 
         logger.info(
             "[BENCHMARK] Gemini stream generation took %.1f ms",
@@ -1344,14 +1500,7 @@ async def generate_reply_stream(session_id: str, user_input: str):
     conversation_memory.add_message(session_id, "assistant", full_reply)
 
     logger.info(
-        "[BENCHMARK] Total generate_reply_stream turn took %.1f ms",
-        (time.perf_counter() - _turn_start) * 1000,
-        extra={"session_id": session_id},
-    )
-    # [PERF] (d) Total turn duration: query prep + retrieval + full Gemini
-    # stream (through TTFT and beyond) + memory bookkeeping, end to end.
-    logger.info(
-        "[PERF] Total turn duration was %.1f ms",
+        "[PERF] Total generate_reply_stream turn took %.1f ms",
         (time.perf_counter() - _turn_start) * 1000,
         extra={"session_id": session_id},
     )
@@ -1362,43 +1511,54 @@ async def generate_reply_stream(session_id: str, user_input: str):
 
 def transcribe_audio(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
     """Transcribe spoken audio into text using Gemini's native audio
-    understanding, so voice input can flow through the same generate_reply
-    pipeline as typed text.
-
-    Supports English, Urdu (script), and Roman Urdu speech — the model is
-    instructed to transcribe in whichever of the three the speaker actually
-    used, rather than translating.
-
-    Returns an empty string on failure (caller should treat that as "could
-    not transcribe" and show its own message rather than passing "" into
-    generate_reply).
+    understanding, ensuring Hindustani speech is always rendered in Urdu script.
     """
     try:
         _t0 = time.perf_counter()
+        prompt = (
+            "You are a strict audio transcription engine.\n"
+            "STRICT SCRIPT RULES:\n"
+            "1. If the speaker speaks Urdu, Hindi, or Hindustani, you MUST transcribe strictly in Urdu script (Perso-Arabic, e.g., 'بیٹری کیوں بہتر ہے؟').\n"
+            "2. ABSOLUTELY NO DEVANAGARI / HINDI CHARACTERS ALLOWED (e.g., do NOT write 'क्यों बेहतर है').\n"
+            "3. English technical terms (e.g., 'Lithium iron phosphate battery', 'SLI 100') can remain in English script.\n"
+            "4. Output ONLY the raw transcription text.\n\n"
+            "Examples:\n"
+            "- Audio: 'kyun behtar hai' -> Output: 'کیوں بہتر ہے'\n"
+            "- Audio: 'battery price kitni hai' -> Output: 'battery کی قیمت کتنی ہے'\n"
+        )
         response = _call_gemini_with_retry(
             model=settings.GEMINI_MODEL,
             contents=[
                 types.Part.from_bytes(data=audio_bytes, mime_type=mime_type),
-                (
-                            "Transcribe the following audio accurately. "
-                            "CRITICAL INSTRUCTION: If the spoken language is Urdu, Hindi, or Hindustani, "
-                            "you MUST transcribe it strictly using the Urdu script (Perso-Arabic script, e.g., 'کیا تم...'). "
-                            "Do NOT output Devanagari or Hindi characters under any circumstances. "
-                            "If Roman Urdu, transcribe in Roman Urdu using English letters. "
-                            "If English, transcribe in English. "
-                            "Output ONLY the raw transcription text without any labels, notes, or extra formatting."
-                ),
+                prompt,
             ],
-            config=types.GenerateContentConfig(),
+            config=types.GenerateContentConfig(temperature=0.0),
         )
+        text = (response.text or "").strip()
+
+        # Automatic safeguard: Convert any lingering Devanagari characters to Urdu script
+        if _DEVANAGARI_FULL_RE.search(text):
+            logger.warning("Devanagari characters detected in transcription output; converting to Urdu script...")
+            cleanup_prompt = (
+                f"Convert the following text into proper Urdu script. "
+                f"Output strictly Urdu and English characters only, with zero Devanagari characters:\n{text}"
+            )
+            cleanup_resp = _call_gemini_with_retry(
+                model=settings.GEMINI_MODEL,
+                contents=cleanup_prompt,
+                config=types.GenerateContentConfig(temperature=0.0),
+            )
+            text = (cleanup_resp.text or "").strip()
+
         logger.info(
             "[BENCHMARK] Audio transcription took %.1f ms",
             (time.perf_counter() - _t0) * 1000,
         )
-        return (response.text or "").strip()
-    except Exception:
+        return strip_hindi_characters(text)
+    except Exception as e:
         logger.exception("Audio transcription failed after retries", extra={"session_id": "-"})
         return ""
+    
 
 async def transcribe_audio_async(audio_bytes: bytes, mime_type: str = "audio/wav") -> str:
     """Async wrapper around transcribe_audio.
