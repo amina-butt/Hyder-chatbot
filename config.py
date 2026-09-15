@@ -23,20 +23,8 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str
     GEMINI_MODEL: str = "gemini-3.5-flash-lite"
     GEMINI_TEMPERATURE: float = 0.3
-    # Urdu script (and to a lesser extent Roman Urdu) tokenizes less
-    # efficiently than English under most tokenizers — the same sentence
-    # can cost noticeably more tokens. This was previously raised to 4096
-    # because 2048 was occasionally tight for longer Urdu answers.
-    # Lowered to 510 for faster streaming turnaround — NOTE: this
-    # reintroduces the truncation risk the 4096 change existed to avoid,
-    # especially for longer Urdu replies and multi-model comparisons.
-    # rag_engine._response_was_truncated / _trim_to_last_complete_sentence
-    # will kick in more often as a result; watch for cut-off replies and
-    # raise this back up if that becomes noticeable.
+
     GEMINI_MAX_OUTPUT_TOKENS: int = 1500
-    # Per-HTTP-call timeout to Gemini, in seconds. Bounds a stalled/hanging
-    # connection — without this, a call that never returns (rather than
-    # erroring) can block a threadpool slot indefinitely.
     GEMINI_TIMEOUT_SECONDS: float = 30.0
 
     # --- Vector store (ChromaDB) ---
@@ -44,12 +32,6 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "hyder_bikes_kb"
 
     # --- Embeddings ---
-    # NOTE: this model must produce the same embedding dimensionality as
-    # whatever is already stored in CHROMA_DB_PATH. If you change this after
-    # ingesting data, delete the CHROMA_DB_PATH directory and re-run
-    # ingest.py — mixing embeddings from two different models in one
-    # collection silently produces meaningless similarity scores, even if
-    # the vector dimensions happen to match.
     EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 
     # --- Chatwoot Integration ---
@@ -86,10 +68,6 @@ class Settings(BaseSettings):
     LOG_BACKUP_COUNT: int = 3
 
     # --- API auth ---
-    # Shared secret your frontend must send as X-API-Key. Left as None by
-    # default so local dev doesn't need one set; the auth dependency in
-    # main.py refuses to start serving the protected endpoint if this is
-    # unset in a non-development ENVIRONMENT (see main.py's startup check).
     API_KEY: str | None = None
     ENVIRONMENT: str = "development"  # "development" | "production"
 

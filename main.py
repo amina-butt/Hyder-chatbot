@@ -19,6 +19,7 @@ import uuid
 
 import sys
 import asyncio
+from contextlib import asynccontextmanager
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -96,40 +97,46 @@ if not (CHATWOOT_BASE_URL and CHATWOOT_API_TOKEN and CHATWOOT_ACCOUNT_ID):
         "are set."
     )
 
-# One shared AsyncClient (keep-alive pooling) for all outbound Chatwoot API
-# calls, mirroring how _genai_client is a module-level singleton in
-# rag_engine.py rather than built per-call.
-_chatwoot_http_client = httpx.AsyncClient(
-    base_url=CHATWOOT_BASE_URL,
-    headers={"api_access_token": CHATWOOT_API_TOKEN or ""},
-    timeout=15.0,
-)
-_INCOMING_MESSAGE_TYPE = 0 
+# Chatwoot sends message_type as an int (0) over the API but as a string
+# ("incoming") in some webhook payload variants — accept both so the
+# recursive-echo guard doesn't accidentally let a bot/outgoing message
+# through and re-trigger generate_reply on it.
+_INCOMING_MESSAGE_TYPES = {0, "incoming"}
 
 # --------------------------------------------------------------------------
 # Rate limiting
 # --------------------------------------------------------------------------
 limiter = Limiter(key_func=get_remote_address)
 
-app = FastAPI(title="Hyder Assistant API", version="1.0.0")
-app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
-
 
 # --------------------------------------------------------------------------
-# Startup verification: local FAQ router
+# Lifespan: Chatwoot HTTP client + startup verification
 # --------------------------------------------------------------------------
-# faq_router is already a module-level singleton (loaded once at import
-# time in faq_router.py) and rag_engine.py already imports/uses it
-# directly — this handler doesn't initialize anything new. It just surfaces,
-# in the same structured request/latency log stream as everything else,
-# whether the zero-cost local intercept actually has data to match
-# against. An empty/failed load (e.g. faqs.json missing or malformed) is
-# NOT fatal — FAQRouter fails closed and every query simply falls through
-# to the normal ChromaDB + Gemini pipeline — but it's worth knowing at a
-# glance whether that fallback is silently happening for 100% of traffic.
-@app.on_event("startup")
-async def _log_faq_router_status() -> None:
+# Replaces the old module-level `_chatwoot_http_client` global and the
+# `@app.on_event("startup"/"shutdown")` handlers. Building the
+# httpx.AsyncClient here (inside the running event loop) rather than at
+# import time avoids binding its connection pool to a loop that may not be
+# the one actually serving requests. Stashed on app.state so the Chatwoot
+# helper functions below can reach it without a module-level global.
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.http_client = httpx.AsyncClient(
+        base_url=CHATWOOT_BASE_URL,
+        headers={"api_access_token": CHATWOOT_API_TOKEN or ""},
+        timeout=15.0,
+    )
+
+    # Startup verification: local FAQ router. faq_router is already a
+    # module-level singleton (loaded once at import time in faq_router.py)
+    # and rag_engine.py already imports/uses it directly — this doesn't
+    # initialize anything new. It just surfaces, in the same structured
+    # request/latency log stream as everything else, whether the
+    # zero-cost local intercept actually has data to match against. An
+    # empty/failed load (e.g. faqs.json missing or malformed) is NOT
+    # fatal — FAQRouter fails closed and every query simply falls through
+    # to the normal ChromaDB + Gemini pipeline — but it's worth knowing at
+    # a glance whether that fallback is silently happening for 100% of
+    # traffic.
     intent_count = len(faq_router._intents)
     model_count = len(faq_router._models)
     if intent_count == 0:
@@ -146,9 +153,14 @@ async def _log_faq_router_status() -> None:
             intent_count, model_count, faq_router._path,
         )
 
-@app.on_event("shutdown")
-async def _close_chatwoot_client() -> None:
-    await _chatwoot_http_client.aclose()
+    yield
+
+    await app.state.http_client.aclose()
+
+
+app = FastAPI(title="Hyder Assistant API", version="1.0.0", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 app.add_middleware(
     CORSMiddleware,
@@ -439,7 +451,7 @@ async def send_chatwoot_msg(conversation_id: int | str, content: str, private: b
     share the same error handling."""
     url = f"/api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/messages"
     try:
-        resp = await _chatwoot_http_client.post(
+        resp = await app.state.http_client.post(
             url,
             json={"content": content, "message_type": "outgoing", "private": private},
         )
@@ -463,7 +475,7 @@ async def update_chatwoot_status(conversation_id: int | str, status: str = "open
     agent inbox instead of sitting wherever it was before (e.g. resolved)."""
     url = f"/api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/toggle_status"
     try:
-        resp = await _chatwoot_http_client.post(url, json={"status": status})
+        resp = await app.state.http_client.post(url, json={"status": status})
         resp.raise_for_status()
     except Exception:
         logger.exception(
@@ -583,9 +595,9 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
 
     if payload.get("event") != "message_created":
         return {"status": "received"}
-    if payload.get("message_type") != _INCOMING_MESSAGE_TYPE:
+    if payload.get("message_type") not in _INCOMING_MESSAGE_TYPES:
         return {"status": "received"}
-    if payload.get("private", False):
+    if payload.get("private") is True:
         return {"status": "received"}
 
     background_tasks.add_task(process_chatwoot_webhook, payload)
