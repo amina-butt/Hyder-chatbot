@@ -593,11 +593,22 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     except Exception:
         return {"status": "received"}
 
-    if payload.get("event") != "message_created":
-        return {"status": "received"}
+# Guard 1: Message Type Check
     if payload.get("message_type") not in _INCOMING_MESSAGE_TYPES:
         return {"status": "received"}
+
+    # Guard 2: Sender Check (Drop human agent replies; customer type is "contact")
+    sender = payload.get("sender") or {}
+    if sender.get("type") == "user":
+        return {"status": "received"}
+
+    # Guard 3: Private Note Check
     if payload.get("private") is True:
+        return {"status": "received"}
+
+    # Guard 4: Human Handoff Check (Do not process if conversation is open/handled by staff)
+    conversation = payload.get("conversation") or {}
+    if conversation.get("status") == "open":
         return {"status": "received"}
 
     background_tasks.add_task(process_chatwoot_webhook, payload)

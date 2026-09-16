@@ -1,0 +1,18 @@
+services:
+  bot-backend:
+    build: .
+    container_name: hyder_bot_backend
+    restart: always
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./chroma_db:/app/chroma_db
+      - ./logs:/app/logs
+    networks:
+      - chatwoot_network
+
+networks:
+  chatwoot_network:
+    external: true

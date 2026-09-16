@@ -17,19 +17,13 @@ RUN apt-get update \
         ffmpeg \
     && rm -rf /var/lib/apt/lists/*
 
-
-# ---- Python dependencies (cached separately from app code) ----
+# ---- Python dependencies (cached separately) ----
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # ---- Project files ----
-COPY main.py .
-COPY rag_engine.py .
-COPY config.py .
-COPY memory.py .
-COPY logger.py .
-COPY chroma_db/ ./chroma_db/
-COPY data/ ./data/
+# Copies all code files (main.py, faq_router.py, faqs.json, etc.)
+COPY . .
 
 # ---- Run as non-root user ----
 RUN useradd --create-home --shell /bin/bash appuser \
