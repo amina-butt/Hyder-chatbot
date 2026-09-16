@@ -28,6 +28,8 @@ load_dotenv()
 
 import httpx
 import uvicorn
+import re
+from fastapi import FastAPI
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -58,6 +60,13 @@ from faq_router import faq_router
 
 logger = get_logger(__name__)
 
+
+app = FastAPI()
+
+def format_bot_response(text: str) -> str:
+    clean_text = text.replace("\\n", "\n")
+    clean_text = re.sub(r"\n{3,}", "\n\n", clean_text)
+    return clean_text.strip()
 # --------------------------------------------------------------------------
 # Startup sanity check
 # --------------------------------------------------------------------------
@@ -573,6 +582,7 @@ async def process_chatwoot_webhook(payload: dict) -> None:
         # uses for transcribe_audio_async, so it doesn't stall the event
         # loop other requests are running on.
         reply_text, handoff_triggered = await asyncio.to_thread(generate_reply, session_id, user_input)
+        reply_text = format_bot_response(reply_text)
         await send_chatwoot_msg(conversation_id, reply_text)
 
         if handoff_triggered:
@@ -593,7 +603,7 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     except Exception:
         return {"status": "received"}
 
-# Guard 1: Message Type Check
+    # Guard 1: Message Type Check
     if payload.get("message_type") not in _INCOMING_MESSAGE_TYPES:
         return {"status": "received"}
 

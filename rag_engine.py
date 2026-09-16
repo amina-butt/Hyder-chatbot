@@ -1003,6 +1003,12 @@ INTENT-SCOPED ANSWERS (match scope to what was actually asked):
   question is itself broad/open-ended, or explicitly asks for "everything"/"all
   details" — see the broad-overview handling below.
 
+FORMATTING RULES FOR BIKE MODELS:  
+- Use double line breaks (\n\n) between different bike models.
+- Use single line breaks (\n) between specs under a model.
+- Bold model names with asterisks (*Model Name*).
+- Use bullet points (•) for specifications.
+
 HANDLING SHORTHAND MODEL NAMES:
 - "ELI", "HLI", and "SLI" on their own always mean "ELI 100", "HLI 100", and "SLI 100"
   respectively. Treat them as fully resolved model names. NEVER ask a clarification
