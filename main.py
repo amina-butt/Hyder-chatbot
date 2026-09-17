@@ -600,6 +600,7 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     cheap dict filtering before returning."""
     try:
         payload = await request.json()
+        print(f"DEBUG Webhook Payload: event={payload.get('event')}, message_type={payload.get('message_type')}")
     except Exception:
         return {"status": "received"}
 
@@ -616,9 +617,9 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     if payload.get("private") is True:
         return {"status": "received"}
 
-    # Guard 4: Human Handoff Check (Do not process if conversation is open/handled by staff)
+    # Guard 4: Human Handoff Check (Only skip if a human agent is assigned)
     conversation = payload.get("conversation") or {}
-    if conversation.get("status") == "open":
+    if conversation.get("assignee") is not None:
         return {"status": "received"}
 
     background_tasks.add_task(process_chatwoot_webhook, payload)
