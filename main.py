@@ -20,6 +20,7 @@ import uuid
 import sys
 import asyncio
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit, urlunsplit
 
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
@@ -64,9 +65,22 @@ logger = get_logger(__name__)
 app = FastAPI()
 
 def format_bot_response(text: str) -> str:
-    clean_text = text.replace("\\n", "\n")
-    clean_text = re.sub(r"\n{3,}", "\n\n", clean_text)
-    return clean_text.strip()
+    if not text:
+        return ""
+    # Convert standard Markdown **bold** to WhatsApp *bold*
+    text = re.sub(r"\*\*(.*?)\*\*", r"*\1*", text)
+
+    # Convert markdown headers (### Header) into bold text (*Header*)
+    text = re.sub(r"^#{1,6}\s*(.*?)$", r"*\1*", text, flags=re.MULTILINE)
+
+    # Ensure uniform bullet points
+    text = text.replace("•", "• ")
+    text = re.sub(r"•\s+", "• ", text)
+
+    # Clean up excessive stacked empty lines (max 2 newlines)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+
+    return text.strip()
 # --------------------------------------------------------------------------
 # Startup sanity check
 # --------------------------------------------------------------------------
@@ -105,6 +119,16 @@ if not (CHATWOOT_BASE_URL and CHATWOOT_API_TOKEN and CHATWOOT_ACCOUNT_ID):
         "requests, but every outbound Chatwoot API call will fail until these "
         "are set."
     )
+
+# Per-conversation lock store to enforce strict FIFO message ordering
+_conversation_locks: dict[int | str, asyncio.Lock] = {}
+_locks_guard = asyncio.Lock()
+
+async def get_conversation_lock(conversation_id: int | str) -> asyncio.Lock:
+    async with _locks_guard:
+        if conversation_id not in _conversation_locks:
+            _conversation_locks[conversation_id] = asyncio.Lock()
+        return _conversation_locks[conversation_id]
 
 # Chatwoot sends message_type as an int (0) over the API but as a string
 # ("incoming") in some webhook payload variants — accept both so the
@@ -471,7 +495,14 @@ async def send_chatwoot_msg(conversation_id: int | str, content: str, private: b
             conversation_id, private,
         )
 
+async def send_chatwoot_msg_chunks(conversation_id: int | str, full_text: str) -> None:
+    """Splits long text into paragraph chunks and sends them as separate messages."""
+    chunks = [c.strip() for c in full_text.split("\n\n") if c.strip()]
+    for chunk in chunks:
+        await send_chatwoot_msg(conversation_id, chunk)
+        await asyncio.sleep(0.5)  # Brief pause between WhatsApp message bubbles
 
+        
 async def send_chatwoot_private_note(conversation_id: int | str, content: str) -> None:
     """Internal note visible only to agents in the inbox — never sent to
     the customer on WhatsApp."""
@@ -499,6 +530,9 @@ async def update_chatwoot_status(conversation_id: int | str, status: str = "open
 _AUDIO_EXTENSIONS = (".ogg", ".opus", ".mp3", ".m4a", ".wav", ".webm")
 
 
+_AUDIO_FILE_TYPES = {"audio", "voice", "audio_clip"}
+
+
 def _extract_incoming_text_and_audio(payload: dict) -> tuple[str, dict | None]:
     """Pulls user-facing text and (if present) the first audio attachment
     out of a Chatwoot `message_created` webhook payload."""
@@ -506,11 +540,48 @@ def _extract_incoming_text_and_audio(payload: dict) -> tuple[str, dict | None]:
     audio_attachment = None
     for att in payload.get("attachments") or []:
         file_type = (att.get("file_type") or "").lower()
-        data_url = (att.get("data_url") or "").lower()
-        if file_type == "audio" or data_url.endswith(_AUDIO_EXTENSIONS):
+        # ActiveStorage URLs commonly carry a query string
+        # (?disposition=attachment) — strip it before checking the
+        # extension, or a real audio.ogg attachment silently fails the
+        # endswith() check and gets treated as ordinary text.
+        data_url = (att.get("data_url") or "").lower().split("?")[0]
+        if file_type in _AUDIO_FILE_TYPES or data_url.endswith(_AUDIO_EXTENSIONS):
             audio_attachment = att
             break
     return content, audio_attachment
+
+
+def _resolve_chatwoot_media_url(data_url: str) -> str:
+    """Rewrites a Chatwoot attachment `data_url` so it's reachable from
+    *inside* the hyder-bot container, on the `chatwoot_network` Docker network.
+
+    `data_url` arrives in one of several shapes — a relative path
+    ("/rails/active_storage/blobs/.../note.ogg"), an absolute localhost URL,
+    or an absolute public/tunnel domain that happens to point at the same
+    Rails app. hyder-bot can't resolve any of "localhost" (nothing listens
+    on that port in *this* container), 127.0.0.1, or a public tunnel host
+    (no route out to it) — so any ActiveStorage URL, whatever host it
+    claims, has to be rewritten to the container-to-container host. Only a
+    genuinely different storage backend (S3/GCS pre-signed URLs) is left
+    untouched, since those ARE reachable as-is and rewriting them would
+    break their signature.
+    """
+    if not data_url:
+        return data_url
+
+    parsed = urlsplit(data_url)
+    path = parsed.path if parsed.netloc else data_url.split("?", 1)[0]
+
+    if path.startswith("/") and (
+        "/rails/active_storage/" in path or not parsed.netloc
+    ):
+        base = urlsplit(CHATWOOT_BASE_URL)
+        if parsed.netloc:
+            return urlunsplit(parsed._replace(scheme=base.scheme, netloc=base.netloc))
+        return f"{CHATWOOT_BASE_URL}{data_url}"
+
+    # Some other storage backend (e.g. pre-signed S3/GCS URL) — leave alone.
+    return data_url
 
 
 async def process_chatwoot_webhook(payload: dict) -> None:
@@ -533,64 +604,102 @@ async def process_chatwoot_webhook(payload: dict) -> None:
     # session_id does.
     session_id = f"chatwoot_{conversation_id}"
 
-    try:
-        content, audio_attachment = _extract_incoming_text_and_audio(payload)
+    lock = await get_conversation_lock(conversation_id)
+    async with lock:
+        try:
+            content, audio_attachment = _extract_incoming_text_and_audio(payload)
 
-        if audio_attachment is not None:
-            try:
-                async with httpx.AsyncClient(timeout=30.0) as fetch_client:
-                    audio_resp = await fetch_client.get(audio_attachment["data_url"])
-                    audio_resp.raise_for_status()
-                audio_bytes = audio_resp.content
-                if len(audio_bytes) > MAX_AUDIO_BYTES:
-                    raise ValueError(f"Audio attachment exceeds {MAX_AUDIO_BYTES} bytes")
-                # WhatsApp voice notes arrive as ogg/opus near-universally;
-                # the Chatwoot attachment payload doesn't reliably include a
-                # real content-type, so this is a safe default rather than
-                # a genuine sniff.
-                transcript = await transcribe_audio_async(audio_bytes, "audio/ogg")
-                user_input = strip_hindi_characters(transcript)
-            except Exception:
-                logger.exception("Chatwoot audio fetch/transcription failed", extra={"session_id": session_id})
+            if audio_attachment is not None:
+                try:
+                    audio_url = _resolve_chatwoot_media_url(audio_attachment.get("data_url", ""))
+                    logger.info("Fetching Chatwoot audio attachment", extra={"session_id": session_id, "audio_url": audio_url})
+
+                    audio_bytes = None
+                    max_retries = 4
+                    retry_delay = 1.5
+
+                    async with httpx.AsyncClient(
+                        timeout=30.0,
+                        headers={"api_access_token": CHATWOOT_API_TOKEN or ""},
+                        follow_redirects=True,
+                    ) as fetch_client:
+                        for attempt in range(1, max_retries + 1):
+                            try:
+                                audio_resp = await fetch_client.get(audio_url)
+                                audio_resp.raise_for_status()
+                                audio_bytes = audio_resp.content
+                                break
+                            except httpx.HTTPStatusError as err:
+                                if err.response.status_code == 404 and attempt < max_retries:
+                                    logger.warning(
+                                        f"Audio file not ready yet on attempt {attempt}/{max_retries} (404). Retrying in {retry_delay}s...",
+                                        extra={"session_id": session_id},
+                                    )
+                                    await asyncio.sleep(retry_delay)
+                                else:
+                                    raise
+
+                    if not audio_bytes:
+                        raise ValueError("Failed to retrieve audio content from Chatwoot")
+
+
+                    if len(audio_bytes) > MAX_AUDIO_BYTES:
+                        raise ValueError(f"Audio attachment exceeds {MAX_AUDIO_BYTES} bytes")
+
+                    raw_transcript = await transcribe_audio_async(audio_bytes, "audio/ogg")
+                    logger.info("Raw audio transcript: '%s'", raw_transcript, extra={"session_id": session_id})
+                    
+                    cleaned_transcript = strip_hindi_characters(raw_transcript)
+                    
+                    # Prevent emptying the transcript if audio was rendered in Devanagari script
+                    user_input = cleaned_transcript if cleaned_transcript.strip() else raw_transcript
+                except Exception:
+                    logger.exception("Chatwoot audio fetch/transcription failed", extra={"session_id": session_id})
+                    await send_chatwoot_msg(
+                        conversation_id,
+                        "Sorry, I couldn't process that voice note. Could you type your question instead?",
+                    )
+                    return
+            else:
+                user_input = content
+
+            if not user_input.strip():
+                logger.info("Chatwoot webhook had no usable text/audio content — dropping.", extra={"session_id": session_id})
+                return
+
+            triggered, reason = detect_escalation_trigger(user_input)
+            if triggered:
+                await send_chatwoot_private_note(
+                    conversation_id,
+                    f"[Auto-escalation: {reason}] Customer message: {user_input}",
+                )
                 await send_chatwoot_msg(
                     conversation_id,
-                    "Sorry, I couldn't process that voice note. Could you type your question instead?",
+                    "Thanks for reaching out — I'm connecting you with a member of our team who will follow up shortly.",
                 )
+                await update_chatwoot_status(conversation_id, "open")
                 return
-        else:
-            user_input = content
 
-        if not user_input.strip():
-            logger.info("Chatwoot webhook had no usable text/audio content — dropping.", extra={"session_id": session_id})
-            return
-
-        triggered, reason = detect_escalation_trigger(user_input)
-        if triggered:
-            await send_chatwoot_private_note(
-                conversation_id,
-                f"[Auto-escalation: {reason}] Customer message: {user_input}",
+            reply_text, handoff_triggered = await asyncio.to_thread(
+                generate_reply, session_id, user_input
             )
-            await send_chatwoot_msg(
-                conversation_id,
-                "Thanks for reaching out — I'm connecting you with a member of our team who will follow up shortly.",
-            )
-            await update_chatwoot_status(conversation_id, "open")
-            return
 
-        # generate_reply is synchronous (blocking Gemini/Chroma calls) —
-        # offload to a worker thread, same pattern rag_engine.py itself
-        # uses for transcribe_audio_async, so it doesn't stall the event
-        # loop other requests are running on.
-        reply_text, handoff_triggered = await asyncio.to_thread(generate_reply, session_id, user_input)
-        reply_text = format_bot_response(reply_text)
-        await send_chatwoot_msg(conversation_id, reply_text)
+            if handoff_triggered or "cannot reach our systems" in reply_text.lower():
+                reply_text = "🤝 I am forwarding your request to a human support representative. Please hold on, someone from our team will be with you shortly!"
+                handoff_triggered = True
 
-        if handoff_triggered:
-            await update_chatwoot_status(conversation_id, "open")
+            reply_text = format_bot_response(reply_text)
+            await send_chatwoot_msg_chunks(conversation_id, reply_text)
 
-    except Exception:
-        logger.exception("process_chatwoot_webhook failed", extra={"session_id": session_id})
-
+            if handoff_triggered:
+                await send_chatwoot_private_note(
+                    conversation_id,
+                    "[Auto-Escalation] Conversation transferred to human support team."
+                )
+                await update_chatwoot_status(conversation_id, "open")
+                
+        except Exception:
+            logger.exception("process_chatwoot_webhook failed", extra={"session_id": session_id})
 
 @app.post("/webhooks/chatwoot")
 async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):

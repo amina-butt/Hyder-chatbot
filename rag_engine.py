@@ -1003,11 +1003,24 @@ INTENT-SCOPED ANSWERS (match scope to what was actually asked):
   question is itself broad/open-ended, or explicitly asks for "everything"/"all
   details" — see the broad-overview handling below.
 
-FORMATTING RULES FOR BIKE MODELS:  
-- Use double line breaks (\n\n) between different bike models.
-- Use single line breaks (\n) between specs under a model.
-- Bold model names with asterisks (*Model Name*).
-- Use bullet points (•) for specifications.
+FORMATTING & LAYOUT RULES (FOR WHATSAPP READABILITY):
+1. Always put model names in bold as a section title (e.g., **HLI 100**).
+2. Bold all attribute labels in bullet lists (e.g., • **Price:** PKR 240,000).
+3. Separate different bike models or major sections with a full blank line.
+4. Never return dense block paragraphs for specifications—always use bullet points.
+
+EXAMPLE SPECIFICATION FORMAT:
+**HLI 100** 🏍️
+• **Price:** PKR 240,000
+• **Motor:** 1200W Hub Motor
+• **Battery:** 72V 30Ah LiFePO4
+• **Range:** 100 km (Eco Mode)
+
+**HLI 150** 🏍️
+• **Price:** PKR 290,000
+• **Motor:** 1500W Hub Motor
+• **Battery:** 72V 40Ah LiFePO4
+• **Range:** 130 km (Eco Mode)
 
 HANDLING SHORTHAND MODEL NAMES:
 - "ELI", "HLI", and "SLI" on their own always mean "ELI 100", "HLI 100", and "SLI 100"
@@ -1295,8 +1308,7 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
     if needs_contact_footer and settings.HUMAN_HANDOFF_CONTACT not in reply_text:
         reply_text = (
             f"{reply_text}\n\n"
-            f"For further assistance, please contact our support team at "
-            f"{settings.HUMAN_HANDOFF_CONTACT}."
+            f"You can drop by any showroom during working hours, or feel free to ask me any other questions right here!"
         )
     # --- Knowledge gap logging ---
     # Only log when the knowledge base genuinely had nothing relevant AND
