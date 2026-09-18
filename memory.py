@@ -1,25 +1,3 @@
-"""
-memory.py
----------
-Session-based sliding-window conversation memory.
-
-Keeps the last N conversational turns per session_id in memory with automatic
-TTL (Time-To-Live) and max-session LRU eviction to prevent memory leaks.
-
-The eviction sweep is time-gated (see _SWEEP_INTERVAL_SECONDS) rather than
-run on every call — a full scan over every session on every single
-add_message/get_history would mean each chat turn blocks on an O(n) scan
-under the shared lock, which turns into real contention once session count
-grows. Sessions may therefore live up to TTL + sweep interval instead of
-exactly TTL; that's a fine tradeoff for avoiding per-request lock contention.
-
-IMPORTANT WORKER WARNING:
-This is an in-memory store. If running Uvicorn with multiple workers (--workers > 1),
-worker processes do NOT share this memory. Requests from the same session_id may hit
-different workers and experience conversation amnesia. For multi-worker production,
-migrate `SessionMemory` to Redis.
-"""
-
 import threading
 import time
 from collections import deque
@@ -32,15 +10,12 @@ from logger import get_logger
 
 logger = get_logger(__name__)
 
-# How often the eviction sweep is allowed to run, regardless of how many
-# add_message/get_history calls happen in between. Keeps the O(n) scan off
-# the hot path for every chat turn.
-_SWEEP_INTERVAL_SECONDS = 300  # 5 minutes
+_SWEEP_INTERVAL_SECONDS = 300
 
 
 @dataclass
 class Message:
-    role: str          # "user" or "assistant"
+    role: str
     content: str
     timestamp: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
@@ -51,11 +26,10 @@ class Message:
 class _SessionEntry:
     history: Deque[Message]
     last_accessed: float
+    pending_question: Optional[str] = None
 
 
 class SessionMemory:
-    """Thread-safe sliding-window memory with TTL and capacity-based eviction."""
-
     def __init__(self, max_turns: Optional[int] = None) -> None:
         self._max_messages = 2 * (max_turns or settings.MAX_HISTORY_TURNS)
         self._ttl_seconds = settings.SESSION_TTL_HOURS * 3600
@@ -65,10 +39,9 @@ class SessionMemory:
         self._last_sweep = 0.0
 
     def _evict_expired_and_overflow_locked(self) -> None:
-        """Full eviction scan (must be called while holding self._lock)."""
         now = time.time()
 
-        # 1. Evict sessions inactive beyond TTL
+        # --- Evict Expired Sessions ---
         expired_keys = [
             sid for sid, entry in self._sessions.items()
             if (now - entry.last_accessed) > self._ttl_seconds
@@ -83,7 +56,7 @@ class SessionMemory:
                 settings.SESSION_TTL_HOURS,
             )
 
-        # 2. If still exceeding MAX_SESSIONS cap, drop oldest-accessed sessions
+        # --- Evict Overflow (LRU) ---
         while len(self._sessions) > self._max_sessions:
             oldest_sid = min(self._sessions, key=lambda k: self._sessions[k].last_accessed)
             del self._sessions[oldest_sid]
@@ -94,8 +67,6 @@ class SessionMemory:
             )
 
     def _maybe_evict_locked(self) -> None:
-        """Runs the eviction scan at most once per _SWEEP_INTERVAL_SECONDS.
-        Must be called while holding self._lock."""
         now = time.time()
         if now - self._last_sweep < _SWEEP_INTERVAL_SECONDS:
             return
@@ -103,7 +74,6 @@ class SessionMemory:
         self._evict_expired_and_overflow_locked()
 
     def add_message(self, session_id: str, role: str, content: str) -> None:
-        """Append a message to a session's history and refresh timestamp."""
         with self._lock:
             self._maybe_evict_locked()
             now = time.time()
@@ -128,7 +98,6 @@ class SessionMemory:
         )
 
     def get_history(self, session_id: str) -> List[Message]:
-        """Return sliding-window history and update session last-accessed time."""
         with self._lock:
             self._maybe_evict_locked()
             entry = self._sessions.get(session_id)
@@ -138,7 +107,6 @@ class SessionMemory:
             return list(entry.history)
 
     def get_history_as_text(self, session_id: str) -> str:
-        """Render history as a simple transcript string."""
         history = self.get_history(session_id)
         if not history:
             return "(no prior conversation in this session)"
@@ -146,7 +114,6 @@ class SessionMemory:
         return "\n".join(lines)
 
     def clear_session(self, session_id: str) -> None:
-        """Wipe a session's history."""
         with self._lock:
             self._sessions.pop(session_id, None)
         logger.info("Session memory cleared", extra={"session_id": session_id})
@@ -155,6 +122,24 @@ class SessionMemory:
         with self._lock:
             return session_id in self._sessions
 
+    def set_pending_question(self, session_id: str, question: str) -> None:
+        with self._lock:
+            entry = self._sessions.get(session_id)
+            if entry:
+                entry.pending_question = question
+                entry.last_accessed = time.time()
 
-# Singleton instance shared across the app
+    def get_pending_question(self, session_id: str) -> Optional[str]:
+        with self._lock:
+            entry = self._sessions.get(session_id)
+            return entry.pending_question if entry else None
+
+    def clear_pending_question(self, session_id: str) -> None:
+        with self._lock:
+            entry = self._sessions.get(session_id)
+            if entry:
+                entry.pending_question = None
+
+
+# --- Singleton ---
 conversation_memory = SessionMemory()

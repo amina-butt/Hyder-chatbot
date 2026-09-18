@@ -1,15 +1,3 @@
-"""
-main.py
--------
-Production FastAPI entrypoint for Hyder Assistant.
-
-Replaces streamlit_app.py as the app's front door. Consumes
-rag_engine.generate_reply_stream — a native async generator that offloads
-its own blocking work internally — directly over SSE, and adds the
-production-hardening pieces a Streamlit app didn't need: CORS, per-IP
-rate limiting, API key auth, a real readiness check, request-id/latency
-logging, and structured error responses.
-"""
 from dotenv import load_dotenv
 import json
 import os
@@ -30,7 +18,6 @@ load_dotenv()
 import httpx
 import uvicorn
 import re
-from fastapi import FastAPI
 from fastapi import BackgroundTasks, Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -40,6 +27,7 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from sse_starlette.sse import EventSourceResponse
+from memory import conversation_memory
 from config import settings
 from logger import get_logger
 from rag_engine import (
@@ -51,66 +39,38 @@ from rag_engine import (
     strip_hindi_characters,
     transcribe_audio_async,
 )
-# faq_router is imported here purely so main.py can log/verify its state at
-# startup (see the startup_event below). rag_engine.py already imports and
-# calls the same module-level `faq_router` singleton directly to intercept
-# queries — main.py never calls faq_router.match() itself, since the
-# interception point requested lives in generate_reply/generate_reply_stream,
-# not here.
 from faq_router import faq_router
 
 logger = get_logger(__name__)
 
 
-app = FastAPI()
-
 def format_bot_response(text: str) -> str:
     if not text:
         return ""
-    # Convert standard Markdown **bold** to WhatsApp *bold*
     text = re.sub(r"\*\*(.*?)\*\*", r"*\1*", text)
-
-    # Convert markdown headers (### Header) into bold text (*Header*)
     text = re.sub(r"^#{1,6}\s*(.*?)$", r"*\1*", text, flags=re.MULTILINE)
-
-    # Ensure uniform bullet points
     text = text.replace("•", "• ")
     text = re.sub(r"•\s+", "• ", text)
-
-    # Clean up excessive stacked empty lines (max 2 newlines)
     text = re.sub(r"\n{3,}", "\n\n", text)
-
     return text.strip()
-# --------------------------------------------------------------------------
-# Startup sanity check
-# --------------------------------------------------------------------------
-# Refuse to boot into production without an API key configured, rather than
-# silently serving an unauthenticated endpoint. Dev is left permissive so
-# you don't need a key for local iteration.
+
+# --- Startup Sanity Check ---
 if settings.ENVIRONMENT == "production" and not settings.API_KEY:
     raise RuntimeError(
         "settings.API_KEY must be set when ENVIRONMENT=production "
         "(refusing to serve an unauthenticated chat endpoint in prod)."
     )
 
-# --------------------------------------------------------------------------
-# CORS configuration
-# --------------------------------------------------------------------------
-# No ALLOWED_ORIGINS field exists in config.py yet, so this reads a
-# comma-separated env var instead of touching Settings. If you'd rather have
-# it validated/typed alongside the rest of your config, add:
-#   ALLOWED_ORIGINS: str = "http://localhost:3000"
-# to config.py and swap the line below for settings.ALLOWED_ORIGINS.
+# --- CORS Configuration ---
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://localhost:8501")
 ALLOWED_ORIGINS = [origin.strip() for origin in _raw_origins.split(",") if origin.strip()]
 
-# --------------------------------------------------------------------------
-# Chatwoot configuration
-# --------------------------------------------------------------------------
-
+# --- Chatwoot Configuration ---
 CHATWOOT_BASE_URL = settings.CHATWOOT_BASE_URL.rstrip("/")
 CHATWOOT_API_TOKEN = settings.CHATWOOT_API_TOKEN
 CHATWOOT_ACCOUNT_ID = settings.CHATWOOT_ACCOUNT_ID
+
+HANDOFF_LABEL = "human_handoff"
 
 if not (CHATWOOT_BASE_URL and CHATWOOT_API_TOKEN and CHATWOOT_ACCOUNT_ID):
     logger.warning(
@@ -120,37 +80,35 @@ if not (CHATWOOT_BASE_URL and CHATWOOT_API_TOKEN and CHATWOOT_ACCOUNT_ID):
         "are set."
     )
 
-# Per-conversation lock store to enforce strict FIFO message ordering
-_conversation_locks: dict[int | str, asyncio.Lock] = {}
+# --- Conversation Locks (refcounted, self-evicting) ---
+_conversation_locks: dict[int | str, tuple[asyncio.Lock, int]] = {}
 _locks_guard = asyncio.Lock()
 
-async def get_conversation_lock(conversation_id: int | str) -> asyncio.Lock:
+@asynccontextmanager
+async def conversation_lock(conversation_id: int | str):
     async with _locks_guard:
-        if conversation_id not in _conversation_locks:
-            _conversation_locks[conversation_id] = asyncio.Lock()
-        return _conversation_locks[conversation_id]
+        lock, refcount = _conversation_locks.get(conversation_id, (None, 0))
+        if lock is None:
+            lock = asyncio.Lock()
+        _conversation_locks[conversation_id] = (lock, refcount + 1)
+    try:
+        async with lock:
+            yield
+    finally:
+        async with _locks_guard:
+            lock, refcount = _conversation_locks[conversation_id]
+            if refcount <= 1:
+                del _conversation_locks[conversation_id]
+            else:
+                _conversation_locks[conversation_id] = (lock, refcount - 1)
 
-# Chatwoot sends message_type as an int (0) over the API but as a string
-# ("incoming") in some webhook payload variants — accept both so the
-# recursive-echo guard doesn't accidentally let a bot/outgoing message
-# through and re-trigger generate_reply on it.
 _INCOMING_MESSAGE_TYPES = {0, "incoming"}
 
-# --------------------------------------------------------------------------
-# Rate limiting
-# --------------------------------------------------------------------------
+# --- Rate Limiting ---
 limiter = Limiter(key_func=get_remote_address)
 
 
-# --------------------------------------------------------------------------
-# Lifespan: Chatwoot HTTP client + startup verification
-# --------------------------------------------------------------------------
-# Replaces the old module-level `_chatwoot_http_client` global and the
-# `@app.on_event("startup"/"shutdown")` handlers. Building the
-# httpx.AsyncClient here (inside the running event loop) rather than at
-# import time avoids binding its connection pool to a loop that may not be
-# the one actually serving requests. Stashed on app.state so the Chatwoot
-# helper functions below can reach it without a module-level global.
+# --- Lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     app.state.http_client = httpx.AsyncClient(
@@ -159,17 +117,6 @@ async def lifespan(app: FastAPI):
         timeout=15.0,
     )
 
-    # Startup verification: local FAQ router. faq_router is already a
-    # module-level singleton (loaded once at import time in faq_router.py)
-    # and rag_engine.py already imports/uses it directly — this doesn't
-    # initialize anything new. It just surfaces, in the same structured
-    # request/latency log stream as everything else, whether the
-    # zero-cost local intercept actually has data to match against. An
-    # empty/failed load (e.g. faqs.json missing or malformed) is NOT
-    # fatal — FAQRouter fails closed and every query simply falls through
-    # to the normal ChromaDB + Gemini pipeline — but it's worth knowing at
-    # a glance whether that fallback is silently happening for 100% of
-    # traffic.
     intent_count = len(faq_router._intents)
     model_count = len(faq_router._models)
     if intent_count == 0:
@@ -204,15 +151,7 @@ app.add_middleware(
 )
 
 
-# --------------------------------------------------------------------------
-# Request-ID + latency logging middleware
-# --------------------------------------------------------------------------
-# rag_engine.py already logs its own internal benchmark timings (embedding,
-# retrieval, Gemini call) tagged with session_id, but nothing previously
-# tied a specific HTTP request to those log lines. Stamping a request_id
-# here (and echoing it back as a response header) lets you grep one
-# request's full path through the logs, and the duration log gives you
-# request-level latency independent of what rag_engine reports internally.
+# --- Request Logging Middleware ---
 @app.middleware("http")
 async def request_context_middleware(request: Request, call_next):
     request_id = str(uuid.uuid4())
@@ -238,26 +177,15 @@ async def request_context_middleware(request: Request, call_next):
     return response
 
 
-# --------------------------------------------------------------------------
-# API key auth
-# --------------------------------------------------------------------------
-# Simple shared-secret check via header, meant to keep the endpoint from
-# being called directly by arbitrary clients — CORS alone only stops
-# browsers, not curl/scripts/other backends. Not a substitute for real
-# per-user auth if you ever need to attribute requests to individual users;
-# it's a "only our frontend talks to this" gate.
+# --- API Key Auth ---
 async def verify_api_key(x_api_key: str | None = Header(default=None)) -> None:
     if not settings.API_KEY:
-        # Dev mode: no key configured, auth is a no-op. The startup check
-        # above guarantees this branch can't be reached in production.
         return
     if not x_api_key or not secrets.compare_digest(x_api_key, settings.API_KEY):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid or missing API key.")
 
 
-# --------------------------------------------------------------------------
-# Structured error handling
-# --------------------------------------------------------------------------
+# --- Structured Error Handling ---
 def _error_body(error_type: str, message: str) -> dict:
     return {"error": {"type": error_type, "message": message}}
 
@@ -288,28 +216,16 @@ async def unhandled_exception_handler(request: Request, exc: Exception):
     )
 
 
-# --------------------------------------------------------------------------
-# Schemas
-# --------------------------------------------------------------------------
+# --- Schemas ---
 class ChatRequest(BaseModel):
     session_id: str = Field(..., min_length=1)
     message: str = Field(..., min_length=1)
 
 
-# --------------------------------------------------------------------------
-# Voice input constraints
-# --------------------------------------------------------------------------
-
 MAX_AUDIO_BYTES = settings.MAX_AUDIO_FILE_SIZE_MB * 1024 * 1024
 
 
-# --------------------------------------------------------------------------
-# Health check
-# --------------------------------------------------------------------------
-# Real readiness check: rag_engine.is_ready() reflects whether the
-# embedding model / Chroma collection / Gemini client actually initialized
-# successfully at import time, instead of always returning ok regardless
-# of the engine's actual state.
+# --- Health Check ---
 @app.get("/health")
 async def health():
     ready, error = is_ready()
@@ -321,28 +237,8 @@ async def health():
     return {"status": "ok"}
 
 
-# --------------------------------------------------------------------------
-# Streaming chat endpoint
-# --------------------------------------------------------------------------
+# --- Streaming Chat Endpoint ---
 async def _event_generator(request: Request, session_id: str, message: str):
-    """Streams SSE events directly from generate_reply_stream.
-
-    generate_reply_stream is now a native async generator: the blocking
-    embedding/ChromaDB work is offloaded internally via asyncio.to_thread,
-    and the Gemini call uses the SDK's async streaming client. Nothing it
-    does blocks the event loop directly any more, so it's iterated here
-    with a plain `async for` instead of being driven through
-    iterate_in_threadpool.
-
-    Verified compatible with the local FAQ router short-circuit added in
-    rag_engine.py: on a match, generate_reply_stream yields exactly one
-    chunk (the canned template) and returns — from this loop's point of
-    view that's indistinguishable from any other single-chunk stream, so
-    it's wrapped in a normal "message" SSE event below and followed by
-    the "done" event from the `else` branch of the `async for`, with no
-    special-casing, no premature connection close, and no formatting
-    glitches on the client side.
-    """
     try:
         async for chunk in generate_reply_stream(session_id, message):
             if await request.is_disconnected():
@@ -377,27 +273,13 @@ async def chat_stream(request: Request, payload: ChatRequest):
         headers={
             "Cache-Control": "no-cache",
             "Connection": "keep-alive",
-            # Tells nginx-style reverse proxies not to buffer the response,
-            # which would otherwise hold chunks until a buffer threshold
-            # is hit and defeat the point of streaming.
             "X-Accel-Buffering": "no",
         },
     )
 
 
-# --------------------------------------------------------------------------
-# Voice input endpoint
-# --------------------------------------------------------------------------
-# multipart/form-data (not JSON) since we're receiving an audio file
-# alongside session_id, so this is a separate endpoint from /api/chat/stream
-# rather than a variant of ChatRequest.
+# --- Voice Input Endpoint ---
 async def _transcript_event_generator(request: Request, session_id: str, transcript: str):
-    """Same shape as _event_generator's stream, but starts with a
-    "transcript" SSE event carrying the transcribed text, so the widget can
-    render the user's own bubble (it never typed anything, so it doesn't
-    otherwise know what was "said") before the assistant's reply starts
-    streaming in.
-    """
     yield {
         "event": "transcript",
         "data": json.dumps({"text": transcript}, ensure_ascii=False),
@@ -442,10 +324,6 @@ async def chat_audio(
         )
 
     if not transcript.strip():
-        # Not a server error — the audio just wasn't understandable speech
-        # (silence, noise, unsupported language). SSE keeps this endpoint's
-        # response shape consistent with /api/chat/stream (the widget's SSE
-        # handler doesn't need a separate code path for a JSON error body).
         async def _empty_transcript_stream():
             yield {
                 "event": "error",
@@ -475,13 +353,8 @@ async def chat_audio(
         },
     )
 
-# --------------------------------------------------------------------------
-# Chatwoot async client
-# --------------------------------------------------------------------------
+# --- Chatwoot Async Client ---
 async def send_chatwoot_msg(conversation_id: int | str, content: str, private: bool = False) -> None:
-    """POST a message into a Chatwoot conversation. `private=True` is what
-    send_chatwoot_private_note uses; kept as one function so both paths
-    share the same error handling."""
     url = f"/api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/messages"
     try:
         resp = await app.state.http_client.post(
@@ -496,23 +369,17 @@ async def send_chatwoot_msg(conversation_id: int | str, content: str, private: b
         )
 
 async def send_chatwoot_msg_chunks(conversation_id: int | str, full_text: str) -> None:
-    """Splits long text into paragraph chunks and sends them as separate messages."""
     chunks = [c.strip() for c in full_text.split("\n\n") if c.strip()]
     for chunk in chunks:
         await send_chatwoot_msg(conversation_id, chunk)
-        await asyncio.sleep(0.5)  # Brief pause between WhatsApp message bubbles
+        await asyncio.sleep(0.5)
 
         
 async def send_chatwoot_private_note(conversation_id: int | str, content: str) -> None:
-    """Internal note visible only to agents in the inbox — never sent to
-    the customer on WhatsApp."""
     await send_chatwoot_msg(conversation_id, content, private=True)
 
 
 async def update_chatwoot_status(conversation_id: int | str, status: str = "open") -> None:
-    """Toggle a conversation's status (open/resolved/pending/snoozed).
-    Used after an escalation so the conversation actually surfaces in the
-    agent inbox instead of sitting wherever it was before (e.g. resolved)."""
     url = f"/api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/toggle_status"
     try:
         resp = await app.state.http_client.post(url, json={"status": status})
@@ -524,9 +391,43 @@ async def update_chatwoot_status(conversation_id: int | str, status: str = "open
         )
 
 
-# --------------------------------------------------------------------------
-# Chatwoot webhook — WhatsApp integration
-# --------------------------------------------------------------------------
+async def add_chatwoot_label(conversation_id: int | str, label: str) -> None:
+    """Attach `label` to a Chatwoot conversation's label set.
+
+    Chatwoot's labels endpoint (POST .../conversations/{id}/labels) REPLACES
+    the conversation's full label list rather than appending to it, so we
+    fetch the existing labels first and merge, to avoid clobbering any
+    labels a human agent has already added.
+    """
+    url = f"/api/v1/accounts/{CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/labels"
+    try:
+        existing_labels: list[str] = []
+        try:
+            get_resp = await app.state.http_client.get(url)
+            get_resp.raise_for_status()
+            existing_labels = get_resp.json().get("payload") or []
+        except Exception:
+            logger.exception(
+                "Chatwoot fetch existing labels failed | conversation_id=%s — "
+                "proceeding to set label anyway (may overwrite other labels).",
+                conversation_id,
+            )
+
+        if label in existing_labels:
+            return
+
+        resp = await app.state.http_client.post(
+            url, json={"labels": [*existing_labels, label]}
+        )
+        resp.raise_for_status()
+    except Exception:
+        logger.exception(
+            "Chatwoot add_label failed | conversation_id=%s label=%s",
+            conversation_id, label,
+        )
+
+
+# --- Chatwoot Webhook (WhatsApp Integration) ---
 _AUDIO_EXTENSIONS = (".ogg", ".opus", ".mp3", ".m4a", ".wav", ".webm")
 
 
@@ -534,16 +435,10 @@ _AUDIO_FILE_TYPES = {"audio", "voice", "audio_clip"}
 
 
 def _extract_incoming_text_and_audio(payload: dict) -> tuple[str, dict | None]:
-    """Pulls user-facing text and (if present) the first audio attachment
-    out of a Chatwoot `message_created` webhook payload."""
     content = (payload.get("content") or "").strip()
     audio_attachment = None
     for att in payload.get("attachments") or []:
         file_type = (att.get("file_type") or "").lower()
-        # ActiveStorage URLs commonly carry a query string
-        # (?disposition=attachment) — strip it before checking the
-        # extension, or a real audio.ogg attachment silently fails the
-        # endswith() check and gets treated as ordinary text.
         data_url = (att.get("data_url") or "").lower().split("?")[0]
         if file_type in _AUDIO_FILE_TYPES or data_url.endswith(_AUDIO_EXTENSIONS):
             audio_attachment = att
@@ -552,20 +447,6 @@ def _extract_incoming_text_and_audio(payload: dict) -> tuple[str, dict | None]:
 
 
 def _resolve_chatwoot_media_url(data_url: str) -> str:
-    """Rewrites a Chatwoot attachment `data_url` so it's reachable from
-    *inside* the hyder-bot container, on the `chatwoot_network` Docker network.
-
-    `data_url` arrives in one of several shapes — a relative path
-    ("/rails/active_storage/blobs/.../note.ogg"), an absolute localhost URL,
-    or an absolute public/tunnel domain that happens to point at the same
-    Rails app. hyder-bot can't resolve any of "localhost" (nothing listens
-    on that port in *this* container), 127.0.0.1, or a public tunnel host
-    (no route out to it) — so any ActiveStorage URL, whatever host it
-    claims, has to be rewritten to the container-to-container host. Only a
-    genuinely different storage backend (S3/GCS pre-signed URLs) is left
-    untouched, since those ARE reachable as-is and rewriting them would
-    break their signature.
-    """
     if not data_url:
         return data_url
 
@@ -580,32 +461,26 @@ def _resolve_chatwoot_media_url(data_url: str) -> str:
             return urlunsplit(parsed._replace(scheme=base.scheme, netloc=base.netloc))
         return f"{CHATWOOT_BASE_URL}{data_url}"
 
-    # Some other storage backend (e.g. pre-signed S3/GCS URL) — leave alone.
     return data_url
 
+_AFFIRMATIVE_RE = re.compile(
+    r"^\s*(yes|yeah|yep|sure|yup|ok|okay|ji|ji haan|haan|ha|ji ha|connect|please|pls|yes please|جی|ہاں)\b",
+    re.IGNORECASE,
+)
+
+def _is_affirmative(text: str) -> bool:
+    return bool(_AFFIRMATIVE_RE.search(text.strip()))
 
 async def process_chatwoot_webhook(payload: dict) -> None:
-    """Background task: everything past the fast webhook ack.
-
-    Runs the human-handoff check first (detect_escalation_trigger), then
-    falls through to the normal generate_reply pipeline — which already
-    contains the Tier-1 faq_router short-circuit and the Tier-2/3
-    ChromaDB + Gemini path internally, so this function doesn't need to
-    call either directly.
-    """
     conversation = payload.get("conversation") or {}
     conversation_id = conversation.get("id") or payload.get("conversation_id")
     if not conversation_id:
         logger.warning("Chatwoot webhook payload had no conversation id — dropping.")
         return
 
-    # One session per Chatwoot conversation, so conversation_memory keeps
-    # WhatsApp follow-ups coherent the same way the web widget's
-    # session_id does.
     session_id = f"chatwoot_{conversation_id}"
 
-    lock = await get_conversation_lock(conversation_id)
-    async with lock:
+    async with conversation_lock(conversation_id):
         try:
             content, audio_attachment = _extract_incoming_text_and_audio(payload)
 
@@ -618,26 +493,23 @@ async def process_chatwoot_webhook(payload: dict) -> None:
                     max_retries = 4
                     retry_delay = 1.5
 
-                    async with httpx.AsyncClient(
-                        timeout=30.0,
-                        headers={"api_access_token": CHATWOOT_API_TOKEN or ""},
-                        follow_redirects=True,
-                    ) as fetch_client:
-                        for attempt in range(1, max_retries + 1):
-                            try:
-                                audio_resp = await fetch_client.get(audio_url)
-                                audio_resp.raise_for_status()
-                                audio_bytes = audio_resp.content
-                                break
-                            except httpx.HTTPStatusError as err:
-                                if err.response.status_code == 404 and attempt < max_retries:
-                                    logger.warning(
-                                        f"Audio file not ready yet on attempt {attempt}/{max_retries} (404). Retrying in {retry_delay}s...",
-                                        extra={"session_id": session_id},
-                                    )
-                                    await asyncio.sleep(retry_delay)
-                                else:
-                                    raise
+                    for attempt in range(1, max_retries + 1):
+                        try:
+                            audio_resp = await app.state.http_client.get(
+                                audio_url, timeout=30.0, follow_redirects=True
+                            )
+                            audio_resp.raise_for_status()
+                            audio_bytes = audio_resp.content
+                            break
+                        except httpx.HTTPStatusError as err:
+                            if err.response.status_code == 404 and attempt < max_retries:
+                                logger.warning(
+                                    f"Audio file not ready yet on attempt {attempt}/{max_retries} (404). Retrying in {retry_delay}s...",
+                                    extra={"session_id": session_id},
+                                )
+                                await asyncio.sleep(retry_delay)
+                            else:
+                                raise
 
                     if not audio_bytes:
                         raise ValueError("Failed to retrieve audio content from Chatwoot")
@@ -651,7 +523,6 @@ async def process_chatwoot_webhook(payload: dict) -> None:
                     
                     cleaned_transcript = strip_hindi_characters(raw_transcript)
                     
-                    # Prevent emptying the transcript if audio was rendered in Devanagari script
                     user_input = cleaned_transcript if cleaned_transcript.strip() else raw_transcript
                 except Exception:
                     logger.exception("Chatwoot audio fetch/transcription failed", extra={"session_id": session_id})
@@ -667,6 +538,24 @@ async def process_chatwoot_webhook(payload: dict) -> None:
                 logger.info("Chatwoot webhook had no usable text/audio content — dropping.", extra={"session_id": session_id})
                 return
 
+            pending_question = conversation_memory.get_pending_question(session_id)
+            if pending_question:
+                if _is_affirmative(user_input):
+                    summary_note = (
+                        f"📌 **Human Handoff Requested by User**\n"
+                        f"**Original Unanswered Question:** {pending_question}"
+                    )
+                    await send_chatwoot_private_note(conversation_id, summary_note)
+                    await add_chatwoot_label(conversation_id, HANDOFF_LABEL)
+                    await update_chatwoot_status(conversation_id, "open")
+                    await send_chatwoot_msg(conversation_id, "Connecting you now...")
+                    
+                    conversation_memory.clear_pending_question(session_id)
+                    return
+                else:
+                    # User asked a new question or said "No"; clear flag and let full flow run
+                    conversation_memory.clear_pending_question(session_id)
+
             triggered, reason = detect_escalation_trigger(user_input)
             if triggered:
                 await send_chatwoot_private_note(
@@ -677,6 +566,7 @@ async def process_chatwoot_webhook(payload: dict) -> None:
                     conversation_id,
                     "Thanks for reaching out — I'm connecting you with a member of our team who will follow up shortly.",
                 )
+                await add_chatwoot_label(conversation_id, HANDOFF_LABEL)
                 await update_chatwoot_status(conversation_id, "open")
                 return
 
@@ -684,18 +574,17 @@ async def process_chatwoot_webhook(payload: dict) -> None:
                 generate_reply, session_id, user_input
             )
 
-            if handoff_triggered or "cannot reach our systems" in reply_text.lower():
-                reply_text = "🤝 I am forwarding your request to a human support representative. Please hold on, someone from our team will be with you shortly!"
-                handoff_triggered = True
-
             reply_text = format_bot_response(reply_text)
             await send_chatwoot_msg_chunks(conversation_id, reply_text)
 
             if handoff_triggered:
-                await send_chatwoot_private_note(
-                    conversation_id,
-                    "[Auto-Escalation] Conversation transferred to human support team."
+                summary_note = (
+                    f"📌 **Human Handoff Triggered**\n"
+                    f"**Customer Message:** {user_input}"
                 )
+                await send_chatwoot_private_note(conversation_id, summary_note)
+
+                await add_chatwoot_label(conversation_id, HANDOFF_LABEL)
                 await update_chatwoot_status(conversation_id, "open")
                 
         except Exception:
@@ -703,13 +592,12 @@ async def process_chatwoot_webhook(payload: dict) -> None:
 
 @app.post("/webhooks/chatwoot")
 async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
-    """Chatwoot webhook receiver — must ack fast (Chatwoot retries/backs
-    off on slow or non-2xx responses), so all real work is deferred to
-    process_chatwoot_webhook via BackgroundTasks. This handler only does
-    cheap dict filtering before returning."""
     try:
         payload = await request.json()
-        print(f"DEBUG Webhook Payload: event={payload.get('event')}, message_type={payload.get('message_type')}")
+        logger.debug(
+            "Chatwoot webhook payload received: event=%s message_type=%s",
+            payload.get("event"), payload.get("message_type"),
+        )
     except Exception:
         return {"status": "received"}
 
@@ -717,7 +605,7 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     if payload.get("message_type") not in _INCOMING_MESSAGE_TYPES:
         return {"status": "received"}
 
-    # Guard 2: Sender Check (Drop human agent replies; customer type is "contact")
+    # Guard 2: Sender Check
     sender = payload.get("sender") or {}
     if sender.get("type") == "user":
         return {"status": "received"}
@@ -726,16 +614,38 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
     if payload.get("private") is True:
         return {"status": "received"}
 
-    # Guard 4: Human Handoff Check (Only skip if a human agent is assigned)
+    # Guard 4: Human Handoff / Active Escalation Check
     conversation = payload.get("conversation") or {}
-    if conversation.get("assignee") is not None:
+    raw_labels = conversation.get("labels") or []
+    labels_set = set()
+    if isinstance(raw_labels, str):
+        labels_set = {l.strip() for l in raw_labels.split(",") if l.strip()}
+    elif isinstance(raw_labels, list):
+        for item in raw_labels:
+            if isinstance(item, str):
+                labels_set.add(item)
+            elif isinstance(item, dict):
+                title = item.get("title") or item.get("name")
+                if title:
+                    labels_set.add(title)
+
+    assignee = conversation.get("assignee")
+    raw_labels = conversation.get("labels") or []
+    labels_set = set()
+    if isinstance(raw_labels, list):
+        for item in raw_labels:
+            if isinstance(item, str):
+                labels_set.add(item)
+            elif isinstance(item, dict):
+                labels_set.add(item.get("title") or item.get("name", ""))
+
+    if assignee is not None or "human_handoff" in labels_set:
+        logger.info("Bot muting reply — assignee=%s labels=%s", assignee, labels_set)
         return {"status": "received"}
 
     background_tasks.add_task(process_chatwoot_webhook, payload)
     return {"status": "received"}
 
-# --------------------------------------------------------------------------
-# Entrypoint
-# --------------------------------------------------------------------------
+# --- Entrypoint ---
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000)
