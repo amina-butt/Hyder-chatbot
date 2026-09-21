@@ -12,9 +12,8 @@ of the application. Import `settings` anywhere configuration is needed:
 """
 
 from functools import lru_cache
-
 from pydantic_settings import BaseSettings, SettingsConfigDict
-
+import os
 
 class Settings(BaseSettings):
     """Application-wide settings, populated from environment variables / .env file."""
@@ -32,12 +31,13 @@ class Settings(BaseSettings):
     CHROMA_COLLECTION_NAME: str = "hyder_bikes_kb"
 
     # --- Embeddings ---
-    EMBEDDING_MODEL_NAME: str = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
+    EMBEDDING_MODEL_NAME: str = "gemini-embedding-001"
 
     # --- Chatwoot Integration ---
     CHATWOOT_BASE_URL: str = ""
     CHATWOOT_API_TOKEN: str = ""
     CHATWOOT_ACCOUNT_ID: str = ""
+    CHATWOOT_WEBHOOK_SECRET: str = os.getenv("CHATWOOT_WEBHOOK_SECRET", "")
 
     # --- Knowledge base ingestion ---
     DATA_FILE_PATH: str = "data/hyder_bikes.txt"

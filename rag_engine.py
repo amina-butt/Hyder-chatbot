@@ -1,5 +1,5 @@
 from __future__ import annotations
-
+import httpx
 import asyncio
 import csv
 import os
@@ -11,10 +11,8 @@ from datetime import datetime
 from typing import List
 
 import chromadb
-import torch
 from google import genai
 from google.genai import types
-from sentence_transformers import SentenceTransformer
 
 from config import settings
 from logger import get_logger
@@ -23,14 +21,12 @@ from faq_router import faq_router
 
 logger = get_logger(__name__)
 
-torch.set_num_threads(4)
 
 # --- Module Init ---
 _READY: bool = False
 _INIT_ERROR: str | None = None
 
 try:
-    _embedding_model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
     _chroma_client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
     _collection = _chroma_client.get_or_create_collection(
         name=settings.CHROMA_COLLECTION_NAME,
@@ -45,7 +41,6 @@ try:
     _READY = True
 except Exception as exc:  # noqa: BLE001
     _INIT_ERROR = f"{type(exc).__name__}: {exc}"
-    _embedding_model = None
     _chroma_client = None
     _collection = None
     _genai_client = None
@@ -378,16 +373,15 @@ _ALL_MODELS_PRICE_QUERY = (
 )
 
 def retrieve_context(query: str, top_k: int | None = None) -> List[RetrievedChunk]:
-    query_embedding = _embedding_model.encode(
-        [query], 
-        normalize_embeddings=True, 
-        convert_to_numpy=True,
-        show_progress_bar=False
+    emb_res = _genai_client.models.embed_content(
+        model=settings.EMBEDDING_MODEL_NAME,
+        contents=query,
     )
+    query_embedding = [e.values for e in emb_res.embeddings]
 
     _t0 = time.perf_counter()
     results = _collection.query(
-        query_embeddings=query_embedding.tolist(),
+        query_embeddings=query_embedding,
         n_results=top_k or settings.TOP_K_RESULTS,
     )
     _elapsed_ms = (time.perf_counter() - _t0) * 1000
@@ -857,6 +851,23 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
 
     return reply_text, handoff_triggered
 
+async def trigger_chatwoot_handoff(conversation_id: str) -> bool:
+    """Toggle conversation status in Chatwoot to open/pending human agent."""
+    if not settings.CHATWOOT_BASE_URL or not settings.CHATWOOT_API_TOKEN:
+        return False
+    
+    url = f"{settings.CHATWOOT_BASE_URL}/api/v1/accounts/{settings.CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/toggle_status"
+    headers = {"api_access_token": settings.CHATWOOT_API_TOKEN}
+    payload = {"status": "open"}
+    
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            return resp.status_code == 200
+    except Exception as exc:
+        logger.error("Failed to trigger Chatwoot handoff: %s", exc)
+        return False
+    
 async def generate_reply_stream(session_id: str, user_input: str):
     _turn_start = time.perf_counter()
     language_hint = detect_language(user_input)
@@ -937,26 +948,32 @@ async def generate_reply_stream(session_id: str, user_input: str):
             ),
         )
 
-        async for chunk in response_stream:
-            chunk_text = ""
-            try:
-                chunk_text = chunk.text if chunk.candidates else ""
-            except (ValueError, AttributeError):
-                logger.warning("Safely skipped a restricted or empty stream chunk.", extra={"session_id": session_id})
-                continue
+        try:
+            async for chunk in response_stream:
+                chunk_text = ""
+                try:
+                    chunk_text = chunk.text if chunk.candidates else ""
+                except (ValueError, AttributeError):
+                    logger.warning("Safely skipped a restricted or empty stream chunk.", extra={"session_id": session_id})
+                    continue
 
-            if chunk_text:
-                clean_chunk = strip_hindi_characters(chunk_text)
-                if clean_chunk:
-                    if not _ttft_logged:
-                        logger.info(
-                            "[PERF] Time-to-first-token (TTFT) was %.1f ms",
-                            (time.perf_counter() - _t0) * 1000,
-                            extra={"session_id": session_id},
-                        )
-                        _ttft_logged = True
-                    full_reply += clean_chunk
-                    yield clean_chunk
+                if chunk_text:
+                    clean_chunk = strip_hindi_characters(chunk_text)
+                    if clean_chunk:
+                        if not _ttft_logged:
+                            logger.info(
+                                "[PERF] Time-to-first-token (TTFT) was %.1f ms",
+                                (time.perf_counter() - _t0) * 1000,
+                                extra={"session_id": session_id},
+                            )
+                            _ttft_logged = True
+                        full_reply += clean_chunk
+                        yield clean_chunk
+        except Exception:
+            logger.exception("Error during stream iteration", extra={"session_id": session_id})
+            error_fallback = f"\n[Stream interrupted] {_AGENT_HANDOFF_MESSAGE}"
+            full_reply += error_fallback
+            yield error_fallback
 
         logger.info(
             "[BENCHMARK] Gemini stream generation took %.1f ms",
@@ -997,6 +1014,19 @@ async def generate_reply_stream(session_id: str, user_input: str):
         footer = f"\n\n{_AGENT_HANDOFF_MESSAGE}"
         full_reply += footer
         yield footer
+
+    if genuine_out_of_scope and not api_failure:
+        conversation_memory.set_pending_question(session_id, user_input)
+        handoff_triggered = False  # Wait for user confirmation before handoff
+    else:
+        handoff_triggered = (
+            escalation_triggered
+            or explicit_handoff_request
+            or frustration_triggered
+        )
+
+    if handoff_triggered:
+        asyncio.create_task(trigger_chatwoot_handoff(session_id))
 
     if not relevant and _is_domain_relevant_query(user_input):
         await asyncio.to_thread(log_unanswered_query, user_input, language_hint)

@@ -21,9 +21,10 @@ import hashlib
 import os
 import sys
 from typing import List
+from urllib import response
 
 import chromadb
-from sentence_transformers import SentenceTransformer
+from google import genai
 
 from config import settings
 from logger import get_logger
@@ -82,14 +83,16 @@ def _chunk_id(chunk: str, idx: int) -> str:
 def build_vector_store(chunks: List[str]) -> None:
     """Embed chunks and upsert them into a persistent ChromaDB collection."""
     logger.info(
-        "Loading embedding model '%s'...",
-        settings.EMBEDDING_MODEL_NAME,
-        extra={"session_id": _INGEST_SESSION},
+      "Generating Gemini embeddings using '%s'...",
+      settings.EMBEDDING_MODEL_NAME,
+      extra={"session_id": _INGEST_SESSION},
     )
-    model = SentenceTransformer(settings.EMBEDDING_MODEL_NAME)
-
-    logger.info("Encoding %d chunks...", len(chunks), extra={"session_id": _INGEST_SESSION})
-    embeddings = model.encode(chunks, show_progress_bar=True, normalize_embeddings=True)
+    client = genai.Client(api_key=settings.GEMINI_API_KEY)
+    response = client.models.embed_content(
+        model=settings.EMBEDDING_MODEL_NAME,
+        contents=chunks,
+    )
+    embeddings = [e.values for e in response.embeddings]
 
     client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
     collection = client.get_or_create_collection(
@@ -101,8 +104,7 @@ def build_vector_store(chunks: List[str]) -> None:
     collection.upsert(
         ids=ids,
         documents=chunks,
-        embeddings=embeddings.tolist(),
-        metadatas=[{"source": settings.DATA_FILE_PATH} for _ in chunks],
+        embeddings=embeddings,
     )
 
     logger.info(

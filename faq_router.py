@@ -67,7 +67,7 @@ _MAX_QUERY_WORDS = 14
 # Words that, anywhere in the message, mean "this needs real reasoning,
 # not a template" — comparisons, negation, causal/explanatory asks, and
 # conjunctions that usually signal a compound question. Checked against
-# the whole message regardless of which intent(s) matched, on top of each
+# the whole message regardless of which intent(s) it touched, on top of each
 # intent's own `block_keywords` (which are more targeted, e.g. "discount"
 # only disqualifying the price intent specifically).
 _GLOBAL_COMPLEXITY_MARKERS = {
@@ -85,12 +85,11 @@ _GLOBAL_COMPLEXITY_MARKERS = {
     "problem", "issue", "complaint", "broken", "damaged", "kharab",
     "not working", "faulty",
 }
-_global_complexity_pattern = re.compile(
-    r"\b(" + "|".join(re.escape(m) for m in _GLOBAL_COMPLEXITY_MARKERS) + r")\b",
-    re.IGNORECASE,
-)
 
-_WORD_RE = re.compile(r"[a-zA-Z]+|[\u0600-\u06FF]+", re.UNICODE)
+_global_complexity_pattern = re.compile(
+    r"(?<!\w)(" + "|".join(re.escape(m) for m in _GLOBAL_COMPLEXITY_MARKERS) + r")(?!\w)",
+    re.IGNORECASE | re.UNICODE,
+)
 
 
 def _normalize(text: str) -> str:
@@ -98,14 +97,19 @@ def _normalize(text: str) -> str:
 
 
 def _contains_phrase(haystack: str, phrase: str) -> bool:
-    """Substring match for multi-word phrases; word-boundary match for
-    single tokens, so e.g. the intent keyword "open" doesn't match inside
-    "opening" in a way that changes meaning, while still letting short
-    multi-word phrases like "how much" match as plain substrings."""
+    """Substring match for multi-word phrases; boundary-aware token match for
+    single tokens, ensuring words ending in punctuation or Unicode characters
+    are matched accurately without false positives inside longer words."""
     phrase = phrase.lower().strip()
+    if not phrase:
+        return False
     if " " in phrase:
         return phrase in haystack
-    return re.search(r"\b" + re.escape(phrase) + r"\b", haystack) is not None
+
+    prefix = r"(?<!\w)" if re.match(r"^\w", phrase, re.UNICODE) else r"(?<=^|\s)"
+    suffix = r"(?!\w)" if re.search(r"\w$", phrase, re.UNICODE) else r"(?=$|\s)"
+    pattern = prefix + re.escape(phrase) + suffix
+    return re.search(pattern, haystack, re.UNICODE) is not None
 
 
 @dataclass(frozen=True)

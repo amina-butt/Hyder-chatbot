@@ -372,7 +372,7 @@ async def send_chatwoot_msg_chunks(conversation_id: int | str, full_text: str) -
     chunks = [c.strip() for c in full_text.split("\n\n") if c.strip()]
     for chunk in chunks:
         await send_chatwoot_msg(conversation_id, chunk)
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.05)
 
         
 async def send_chatwoot_private_note(conversation_id: int | str, content: str) -> None:
@@ -591,7 +591,23 @@ async def process_chatwoot_webhook(payload: dict) -> None:
             logger.exception("process_chatwoot_webhook failed", extra={"session_id": session_id})
 
 @app.post("/webhooks/chatwoot")
-async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
+async def chatwoot_webhook(
+    request: Request,
+    background_tasks: BackgroundTasks,
+    x_chatwoot_token: str | None = Header(default=None, alias="X-Chatwoot-Token"),
+    token: str | None = None, 
+):
+    # Guard 0: Webhook Token Verification
+    webhook_secret = getattr(settings, "CHATWOOT_WEBHOOK_SECRET", None) or os.getenv("CHATWOOT_WEBHOOK_SECRET")
+    if webhook_secret:
+        provided_token = x_chatwoot_token or token
+        if not provided_token or not secrets.compare_digest(provided_token, webhook_secret):
+            logger.warning("Unauthorized Chatwoot webhook attempt with invalid or missing token.")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid or missing webhook token.",
+            )
+
     try:
         payload = await request.json()
         logger.debug(
@@ -616,8 +632,10 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
 
     # Guard 4: Human Handoff / Active Escalation Check
     conversation = payload.get("conversation") or {}
+    assignee = conversation.get("assignee")
     raw_labels = conversation.get("labels") or []
     labels_set = set()
+
     if isinstance(raw_labels, str):
         labels_set = {l.strip() for l in raw_labels.split(",") if l.strip()}
     elif isinstance(raw_labels, list):
@@ -629,17 +647,7 @@ async def chatwoot_webhook(request: Request, background_tasks: BackgroundTasks):
                 if title:
                     labels_set.add(title)
 
-    assignee = conversation.get("assignee")
-    raw_labels = conversation.get("labels") or []
-    labels_set = set()
-    if isinstance(raw_labels, list):
-        for item in raw_labels:
-            if isinstance(item, str):
-                labels_set.add(item)
-            elif isinstance(item, dict):
-                labels_set.add(item.get("title") or item.get("name", ""))
-
-    if assignee is not None or "human_handoff" in labels_set:
+    if assignee is not None or HANDOFF_LABEL in labels_set:
         logger.info("Bot muting reply — assignee=%s labels=%s", assignee, labels_set)
         return {"status": "received"}
 
