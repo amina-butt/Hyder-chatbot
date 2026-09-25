@@ -1,57 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hyder Assistant — Widget Test Page</title>
-<link rel="stylesheet" href="widget.css">
-<style>
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
-    max-width: 720px;
-    margin: 60px auto;
-    padding: 0 20px;
-    color: #1f2937;
-    line-height: 1.6;
-  }
-  h1 { font-size: 22px; }
-  code {
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-size: 13px;
-  }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hyder Assistant — Chatwoot Widget Test</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      max-width: 720px;
+      margin: 60px auto;
+      padding: 0 20px;
+      color: #1f2937;
+      line-height: 1.6;
+    }
+    h1 { font-size: 22px; }
+  </style>
 </head>
 <body>
 
-  <h1>Hyder Assistant — Widget Test Page</h1>
+  <h1>Hyder Assistant — Chatwoot Widget Test</h1>
   <p>
-    This page embeds the standalone chat widget. Click the bubble in the
-    bottom-right corner to open the chat window.
-  </p>
-  <p>
-    The widget streams responses from
-    <code>http://localhost:8000/api/chat/stream</code> — make sure your
-    FastAPI backend is running locally and accepts a JSON body of the shape
-    <code>{ "session_id": "...", "message": "..." }</code>, responding with
-    a streamed text body.
-  </p>
-  <p>
-    Try sending both English and Urdu / Roman Urdu messages to see the
-    automatic RTL/LTR text alignment in action.
+    This page embeds the Chatwoot live chat widget. Click the bubble in the
+    bottom-right corner to start a conversation.
   </p>
 
-  <!-- Optional: override widget defaults before widget.js loads -->
+  <!-- Chatwoot Integration Script -->
   <script>
-    window.HYDER_CHAT_CONFIG = {
-      apiUrl: "http://localhost:8000/api/chat/stream",
-      audioApiUrl: "http://localhost:8000/api/chat/audio",
-      title: "Hyder Assistant",
-      greeting: "Hi! How can I help you today? / السلام علیکم، میں آپ کی کیسے مدد کر سکتا ہوں؟"
-    };
+    window.chatwootSettings = { "position": "right", "type": "standard", "launcherTitle": "Chat with us" };
+    (function(d,t) {
+      var BASE_URL = "http://localhost:3000"; // Changed from 0.0.0.0 to localhost
+      var g = d.createElement(t), s = d.getElementsByTagName(t)[0];
+      g.src = BASE_URL + "/packs/js/sdk.js";
+      g.async = true;
+      s.parentNode.insertBefore(g, s);
+      g.onload = function() {
+        window.chatwootSDK.run({
+          websiteToken: 'EEisEciNSqNgdUbGZHFiwApJ',
+          baseUrl: BASE_URL
+        });
+      }
+    })(document, "script");
   </script>
-  <script src="widget.js"></script>
 
 </body>
 </html>

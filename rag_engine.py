@@ -1,5 +1,4 @@
 from __future__ import annotations
-import httpx
 import asyncio
 import csv
 import os
@@ -105,11 +104,16 @@ async def _call_gemini_stream_with_retry_async(
 _URDU_SCRIPT_RE = re.compile(r"[\u0600-\u06FF]")
 _DEVANAGARI_FULL_RE = re.compile(r"[\u0900-\u097F\uA8E0-\uA8FF]+")
 
-def strip_hindi_characters(text: str) -> str:
+def strip_hindi_characters(text: str, strip: bool = True) -> str:
+    """Remove Devanagari characters while preserving newlines (bullet layout).
+
+    Pass strip=False for streamed chunks so the spaces at chunk edges survive.
+    """
     if not text:
         return text
     cleaned = _DEVANAGARI_FULL_RE.sub("", text)
-    return re.sub(r"\s+", " ", cleaned).strip()
+    cleaned = re.sub(r"[ \t]{2,}", " ", cleaned)
+    return cleaned.strip() if strip else cleaned
 
 _ROMAN_URDU_HINTS = {
     "hai", "hain", "hy", "ha", "kya", "kiya", "kyun", "kaise", "kitna", "kitni",
@@ -244,7 +248,7 @@ _STRICT_HUMAN_REQUEST_PATTERNS = [
     r"\bspeak (to|with) (an )?agent\b",
     r"\btalk to (a )?representative\b",
     r"\bspeak (to|with) (a )?representative\b",
-    r"\bconnect me (to|with) (a |the )?(manager|agent|human|representative|support team)\b",
+    r"\bconnect me (to|with) (a |an |the )?(manager|agent|human|representative|support team)\b",
     r"\bhuman support\b", r"\bhuman agent\b",
     r"\bcustomer (service|support) (agent|representative|number)\b",
     r"\bcall (me|us) back\b",
@@ -293,9 +297,13 @@ def _is_frustrated_or_negative_sentiment(query: str) -> bool:
 # in that situation.
 _NO_ANSWER_SIGNAL_PATTERNS = [
     r"\bconnect(ing)? you (with|to)\b",
-    r"\bhuman representative\b",
+    r"\bhuman (support )?(representative|agent)\b",
     r"\bnot available in our (database|system|records)\b",
-    r"\bdon'?t have (that|this) information\b",
+    r"\bdon'?t have (that|this|the exact|any) (info|information)\b",
+    r"\bdon'?t have (that|this) info\b",
+    r"\bjankari nahi\b", r"\bmaloomat (mojood )?nahi\b",
+    r"\bagent se connect\b",
+    r"معلومات نہیں", r"موجود نہیں", r"منسلک",
     r"\bcould ?n'?t find\b", r"\bunable to (find|locate)\b",
     r"\bno information (is )?available\b",
     r"filhal (mojood|dastyab) nahi",
@@ -344,10 +352,107 @@ _escalation_complaint_pattern = re.compile(
 )
 
 
-# --- Agent Handoff Messaging ---
-_AGENT_HANDOFF_MESSAGE = (
-    "I'm connecting you with a member of our support team — someone will follow up with you shortly."
+# --- Handoff Reason Categories (shown to agents in the private note) ---
+HANDOFF_REASON_LABELS = {
+    "explicit_request": "👤 Explicit Customer Request",
+    "frustration": "😡 Customer Frustration",
+    "kb_gap": "❓ Knowledge Base Gap",
+    "test_ride": "📅 Test Ride / Booking Request",
+    "complaint": "⚠️ Complaint / Refund Request",
+    "discount": "💰 Price Discount / Bargain Negotiation",
+    "api_error": "🛠️ AI Service Error",
+}
+
+
+def handoff_reason_label(reason: str | None) -> str:
+    return HANDOFF_REASON_LABELS.get(reason or "", HANDOFF_REASON_LABELS["kb_gap"])
+
+
+def classify_handoff_reason(user_input: str, default: str = "kb_gap") -> str:
+    """Pick the most useful category for the agent. Priority: an explicit ask
+    for a human, then frustration, then what the customer is actually asking
+    about (complaint > test ride > discount), else `default`."""
+    text = user_input or ""
+    if _human_handoff_request_pattern.search(text):
+        return "explicit_request"
+    if _frustration_pattern.search(text):
+        return "frustration"
+    if _escalation_complaint_pattern.search(text):
+        return "complaint"
+    if _escalation_test_ride_pattern.search(text):
+        return "test_ride"
+    if _escalation_discount_pattern.search(text):
+        return "discount"
+    return default
+
+
+# --- Handoff Confirmation Messaging ---
+# Single source of truth: also injected into the system prompt so the LLM and
+# the code use identical wording.
+_HANDOFF_CONFIRM_PROMPT = {
+    "english": (
+        "I don't have the exact information on that. Would you like me to "
+        "connect you with a human support representative?"
+    ),
+    "roman_urdu": (
+        "Mere paas is baare mein exact maloomat mojood nahi hain. Kya aap chahte "
+        "hain ke main aapko human support representative se connect kar doon?"
+    ),
+    "urdu": (
+        "میرے پاس اس بارے میں درست معلومات موجود نہیں ہیں۔ کیا آپ چاہتے ہیں کہ "
+        "میں آپ کو کسی سپورٹ نمائندے سے منسلک کر دوں؟"
+    ),
+}
+
+_HANDOFF_CONNECTING_MESSAGE = {
+    "english": "Connecting you with a human agent now. Someone from our team will follow up with you shortly.",
+    "roman_urdu": "Main aapko abhi human agent se connect kar raha hoon. Hamari team jald aap se rabta karegi.",
+    "urdu": "میں آپ کو ابھی ایک ایجنٹ سے منسلک کر رہا ہوں۔ ہماری ٹیم جلد آپ سے رابطہ کرے گی۔",
+}
+
+
+def handoff_confirmation_prompt(language_hint: str) -> str:
+    return _HANDOFF_CONFIRM_PROMPT.get(language_hint, _HANDOFF_CONFIRM_PROMPT["english"])
+
+
+def handoff_connecting_message(language_hint: str) -> str:
+    return _HANDOFF_CONNECTING_MESSAGE.get(language_hint, _HANDOFF_CONNECTING_MESSAGE["english"])
+
+
+# True when the reply already ends by asking whether to connect a human.
+_REPLY_ASKS_HANDOFF_RE = re.compile(
+    r"(human|agent|representative|support team|نمائندے|ایجنٹ|انسان)[^?؟]*[?؟]\s*$",
+    re.IGNORECASE,
 )
+
+
+def _reply_asks_for_handoff_confirmation(reply_text: str) -> bool:
+    return bool(_REPLY_ASKS_HANDOFF_RE.search(reply_text.strip()))
+
+
+def _resolve_handoff_confirmation(
+    session_id: str,
+    user_input: str,
+    reply_text: str,
+    api_failure: bool,
+    language_hint: str,
+) -> tuple[str, bool]:
+    """Decide whether this turn leaves the bot waiting on a handoff yes/no.
+
+    Returns (suffix_to_append_to_reply, awaiting_confirmation). Whenever the
+    bot is (or is about to be) asking "connect you with a human?", the
+    customer's original question is stored as the pending_question so a later
+    "yes" can post it as the private note. Nothing is handed off here.
+    """
+    asked = _reply_asks_for_handoff_confirmation(reply_text)
+    if not (api_failure or asked or _reply_signals_no_answer(reply_text)):
+        return "", False
+
+    reason = "api_error" if api_failure else classify_handoff_reason(user_input)
+    conversation_memory.set_pending_question(session_id, user_input, reason)
+    if asked:
+        return "", True
+    return f"\n\n{handoff_confirmation_prompt(language_hint)}", True
 
 
 # --- Retrieval ---
@@ -528,6 +633,14 @@ def _is_explicit_human_handoff_request(query: str) -> bool:
     return bool(_human_handoff_request_pattern.search(query))
 
 
+def is_explicit_human_request(query: str) -> bool:
+    return _is_explicit_human_handoff_request(query)
+
+
+def is_frustrated(query: str) -> bool:
+    return _is_frustrated_or_negative_sentiment(query)
+
+
 # --- Chatwoot Escalation Detection ---
 def detect_escalation_trigger(user_input: str) -> tuple[bool, str | None]:
     if not user_input:
@@ -645,10 +758,11 @@ CONTEXT-USE RULES:
 
 HANDLING UNANSWERED / OUT-OF-SCOPE QUESTIONS:
 - If the context block simply does NOT answer the user's question at all (and it isn't an unknown-model case below), respond politely in the user's exact language asking if they would like human assistance:
-  * English: "I don't have this info. Would you like me to connect you with a human agent?"
-  * Roman Urdu: "Mere paas yeh jankari nahi hai. Kya aap chahte hain ke main aapko human agent se connect karoon?"
-  * Urdu Script: "میرے پاس یہ معلومات نہیں ہیں۔ کیا آپ چاہتے ہیں کہ میں آپ کو کسی نمائندے سے منسلک کروں؟"
+  * English: "{_HANDOFF_CONFIRM_PROMPT['english']}"
+  * Roman Urdu: "{_HANDOFF_CONFIRM_PROMPT['roman_urdu']}"
+  * Urdu Script: "{_HANDOFF_CONFIRM_PROMPT['urdu']}"
 - NEVER guess or invent specs, prices, policies, or contact details.
+- NEVER provide telephone numbers, WhatsApp numbers, or any other contact details, even if they appear in the context block. If the user asks for a phone number or contact details, ask the confirmation question above instead.
 - NEVER state that you are already connecting them; ask for confirmation first so the automated flow can trigger upon their approval.
 
 HANDLING SHORTHAND MODEL NAMES:
@@ -801,73 +915,35 @@ def generate_reply(session_id: str, user_input: str) -> tuple[str, bool]:
         logger.exception(
             "Gemini generation failed after retries", extra={"session_id": session_id}
         )
-        reply_text = (
-            f"Sorry, I'm having trouble reaching our systems right now. {_AGENT_HANDOFF_MESSAGE}"
-        )
+        reply_text = "Sorry, I'm having trouble reaching our systems right now."
         api_failure = True
         relevant = False
 
-    escalation_triggered, _ = detect_escalation_trigger(user_input)
-    explicit_handoff_request = _is_explicit_human_handoff_request(user_input)
-    frustration_triggered = _is_frustrated_or_negative_sentiment(user_input)
-    # A low retrieval-relevance score alone no longer counts as "out of
-    # scope" — the LLM is instructed to say so explicitly when it genuinely
-    # can't answer, so we key off that instead of the raw vector distance.
-    # This is what stops correctly-answered FAQs (hours, location, shipping
-    # time, etc.) from getting an unwanted handoff footer appended.
-    genuine_out_of_scope = api_failure or (
-        not relevant and _reply_signals_no_answer(reply_text)
+    # The bot never hands off on its own. If it cannot answer (or the API
+    # failed) it asks for confirmation and parks the customer's question in
+    # pending_question; main.py performs the handoff only after an explicit yes.
+    suffix, awaiting_confirmation = _resolve_handoff_confirmation(
+        session_id, user_input, reply_text, api_failure, language_hint
     )
-
-    if genuine_out_of_scope and not api_failure:
-        conversation_memory.set_pending_question(session_id, user_input)
-        handoff_triggered = False  # Keep AI active to receive Yes/No response
-    else:
-        handoff_triggered = (
-            escalation_triggered
-            or explicit_handoff_request
-            or frustration_triggered
-        )
-
-    if handoff_triggered and _AGENT_HANDOFF_MESSAGE not in reply_text:
-        reply_text = f"{reply_text}\n\n{_AGENT_HANDOFF_MESSAGE}"
+    reply_text = strip_hindi_characters(f"{reply_text}{suffix}")
 
     if not relevant and _is_domain_relevant_query(user_input):
         log_unanswered_query(user_input, language_hint)
-
-    reply_text = strip_hindi_characters(reply_text)
 
     conversation_memory.add_message(session_id, "user", user_input)
     conversation_memory.add_message(session_id, "assistant", reply_text)
 
     logger.info(
-        "Generated reply (lang=%s, relevant_context=%s, api_failure=%s, handoff=%s)",
+        "Generated reply (lang=%s, relevant_context=%s, api_failure=%s, awaiting_handoff_confirmation=%s)",
         language_hint,
         relevant,
         api_failure,
-        handoff_triggered,
+        awaiting_confirmation,
         extra={"session_id": session_id},
     )
 
-    return reply_text, handoff_triggered
+    return reply_text, awaiting_confirmation
 
-async def trigger_chatwoot_handoff(conversation_id: str) -> bool:
-    """Toggle conversation status in Chatwoot to open/pending human agent."""
-    if not settings.CHATWOOT_BASE_URL or not settings.CHATWOOT_API_TOKEN:
-        return False
-    
-    url = f"{settings.CHATWOOT_BASE_URL}/api/v1/accounts/{settings.CHATWOOT_ACCOUNT_ID}/conversations/{conversation_id}/toggle_status"
-    headers = {"api_access_token": settings.CHATWOOT_API_TOKEN}
-    payload = {"status": "open"}
-    
-    try:
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            resp = await client.post(url, json=payload, headers=headers)
-            return resp.status_code == 200
-    except Exception as exc:
-        logger.error("Failed to trigger Chatwoot handoff: %s", exc)
-        return False
-    
 async def generate_reply_stream(session_id: str, user_input: str):
     _turn_start = time.perf_counter()
     language_hint = detect_language(user_input)
@@ -958,7 +1034,7 @@ async def generate_reply_stream(session_id: str, user_input: str):
                     continue
 
                 if chunk_text:
-                    clean_chunk = strip_hindi_characters(chunk_text)
+                    clean_chunk = strip_hindi_characters(chunk_text, strip=False)
                     if clean_chunk:
                         if not _ttft_logged:
                             logger.info(
@@ -971,7 +1047,8 @@ async def generate_reply_stream(session_id: str, user_input: str):
                         yield clean_chunk
         except Exception:
             logger.exception("Error during stream iteration", extra={"session_id": session_id})
-            error_fallback = f"\n[Stream interrupted] {_AGENT_HANDOFF_MESSAGE}"
+            api_failure = True
+            error_fallback = "\n[Stream interrupted]"
             full_reply += error_fallback
             yield error_fallback
 
@@ -988,45 +1065,18 @@ async def generate_reply_stream(session_id: str, user_input: str):
 
     except Exception:
         logger.exception("Gemini streaming failed after retries", extra={"session_id": session_id})
-        error_msg = (
-            f"Sorry, I'm having trouble reaching our systems right now. {_AGENT_HANDOFF_MESSAGE}"
-        )
+        error_msg = "Sorry, I'm having trouble reaching our systems right now."
         full_reply = error_msg
         api_failure = True
         relevant = False
         yield error_msg
 
-    escalation_triggered, _ = detect_escalation_trigger(user_input)
-    explicit_handoff_request = _is_explicit_human_handoff_request(user_input)
-    frustration_triggered = _is_frustrated_or_negative_sentiment(user_input)
-    genuine_out_of_scope = api_failure or (
-        not relevant and _reply_signals_no_answer(full_reply)
+    suffix, _awaiting = _resolve_handoff_confirmation(
+        session_id, user_input, full_reply, api_failure, language_hint
     )
-
-    handoff_triggered = (
-        escalation_triggered
-        or explicit_handoff_request
-        or frustration_triggered
-        or genuine_out_of_scope
-    )
-
-    if handoff_triggered and _AGENT_HANDOFF_MESSAGE not in full_reply:
-        footer = f"\n\n{_AGENT_HANDOFF_MESSAGE}"
-        full_reply += footer
-        yield footer
-
-    if genuine_out_of_scope and not api_failure:
-        conversation_memory.set_pending_question(session_id, user_input)
-        handoff_triggered = False  # Wait for user confirmation before handoff
-    else:
-        handoff_triggered = (
-            escalation_triggered
-            or explicit_handoff_request
-            or frustration_triggered
-        )
-
-    if handoff_triggered:
-        asyncio.create_task(trigger_chatwoot_handoff(session_id))
+    if suffix:
+        full_reply += suffix
+        yield suffix
 
     if not relevant and _is_domain_relevant_query(user_input):
         await asyncio.to_thread(log_unanswered_query, user_input, language_hint)
