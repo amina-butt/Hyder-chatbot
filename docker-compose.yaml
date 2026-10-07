@@ -16,8 +16,8 @@ services:
       - ./chroma_db:/app/chroma_db
       - ./logs:/app/logs
     networks:
-      - chatwoot_network
+      - chatwoot_default
 
 networks:
-  chatwoot_network:
+  chatwoot_default:
     external: true
