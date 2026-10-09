@@ -1,20 +1,22 @@
-# Secrets & Git
-.env
-.env.example
-.git
-.gitignore
-
-# Python & Environment
+# Virtual env and caches
 venv/
 __pycache__/
 *.pyc
-.pytest_cache/
+*.pyo
+*.pyd
 
-# Local Logs & Diagnostics
-logs/
-unanswered_questions*
+# Git tracking
+.git/
+.gitignore
 
-# Local Test Frontend (Kept locally, excluded from backend container)
+# Frontend & testing assets (Not needed for Chatwoot integration)
 index.html
+test_chat.html
 widget.js
 widget.css
+tempCodeRunnerFile.py
+
+# Secrets, runtime logs, and persistent vector storage
+.env
+logs/
+chroma_db/

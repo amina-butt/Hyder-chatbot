@@ -307,6 +307,21 @@ async def _event_generator(request: Request, session_id: str, message: str):
             ),
         }
 
+# --- Standard Non-Streaming Chat Endpoint ---
+@app.post("/api/chat")
+async def chat_non_stream(request: Request, payload: ChatRequest):
+    user_query = payload.message.strip()
+    sid = payload.session_id
+
+    # generate_reply handles Tier 1 FAQ + Tier 2 RAG internally
+    reply_text, awaiting_confirmation = await asyncio.to_thread(
+        generate_reply, sid, user_query
+    )
+
+    return {
+        "reply": sanitize_bot_output(reply_text),
+        "awaiting_confirmation": awaiting_confirmation,
+    }
 
 @app.post("/api/chat/stream", dependencies=[Depends(verify_api_key)])
 @limiter.limit("15/minute")

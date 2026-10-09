@@ -2,7 +2,7 @@
 ingest.py
 ---------
 One-time (or periodically re-run) ingestion pipeline that:
-  1. Reads the raw knowledge base text file (data/hyder_bikes.txt)
+  1. Reads the raw knowledge base text file (data/hyder_knowledge_base.md)
   2. Splits it into overlapping chunks
   3. Embeds each chunk with a local sentence-transformers model
   4. Upserts the chunks + embeddings into a persistent ChromaDB collection
@@ -21,10 +21,9 @@ import hashlib
 import os
 import sys
 from typing import List
-from urllib import response
 
 import chromadb
-from google import genai
+from chromadb.utils import embedding_functions
 
 from config import settings
 from logger import get_logger
@@ -80,23 +79,23 @@ def _chunk_id(chunk: str, idx: int) -> str:
     content_hash = hashlib.sha256(chunk.encode("utf-8")).hexdigest()[:12]
     return f"{content_hash}_{idx}"
 
+
 def build_vector_store(chunks: List[str]) -> None:
-    """Embed chunks and upsert them into a persistent ChromaDB collection."""
+    """Embed chunks locally and upsert them into a persistent ChromaDB collection."""
     logger.info(
-      "Generating Gemini embeddings using '%s'...",
+      "Initializing local sentence-transformer embeddings using '%s'...",
       settings.EMBEDDING_MODEL_NAME,
       extra={"session_id": _INGEST_SESSION},
     )
-    client = genai.Client(api_key=settings.GEMINI_API_KEY)
-    response = client.models.embed_content(
-        model=settings.EMBEDDING_MODEL_NAME,
-        contents=chunks,
+    
+    ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+        model_name=settings.EMBEDDING_MODEL_NAME
     )
-    embeddings = [e.values for e in response.embeddings]
 
     client = chromadb.PersistentClient(path=settings.CHROMA_DB_PATH)
     collection = client.get_or_create_collection(
         name=settings.CHROMA_COLLECTION_NAME,
+        embedding_function=ef,
         metadata={"hnsw:space": "cosine"},
     )
     ids = [_chunk_id(c, i) for i, c in enumerate(chunks)]
@@ -104,7 +103,6 @@ def build_vector_store(chunks: List[str]) -> None:
     collection.upsert(
         ids=ids,
         documents=chunks,
-        embeddings=embeddings,
     )
 
     logger.info(

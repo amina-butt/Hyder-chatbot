@@ -30,8 +30,8 @@ class Settings(BaseSettings):
     CHROMA_DB_PATH: str = "./chroma_db"
     CHROMA_COLLECTION_NAME: str = "hyder_bikes_kb"
 
-    # --- Embeddings ---
-    EMBEDDING_MODEL_NAME: str = "gemini-embedding-001"
+    # --- Embeddings (Zero API cost local model) ---
+    EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
 
     # --- Chatwoot Integration ---
     CHATWOOT_BASE_URL: str = ""
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     CHATWOOT_WEBHOOK_SECRET: str = os.getenv("CHATWOOT_WEBHOOK_SECRET", "")
 
     # --- Knowledge base ingestion ---
-    DATA_FILE_PATH: str = "data/hyder_bikes.txt"
+    DATA_FILE_PATH: str = "data/hyder_knowledge_base.md"
     CHUNK_SIZE: int = 500          # characters per chunk
     CHUNK_OVERLAP: int = 80        # overlap between consecutive chunks
     TOP_K_RESULTS: int = 4         # number of chunks retrieved per query

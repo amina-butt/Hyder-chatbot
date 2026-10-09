@@ -1,0 +1,9 @@
+8. **Delivery & Registration Chunks (Section 09):**
+   - `metadata`: `{"type": "policy", "category": "registration"}`
+
+9. **Customer Recommendation Matrix Chunk (Section 10):**
+   - `metadata`: `{"type": "guide", "category": "recommendations"}`
+
+10. **General EV FAQ Chunks (Section 11):**
+    - `metadata`: `{"type": "faq", "category": "general"}`
+    - `metadata`: `{"type": "faq", "category": "cha

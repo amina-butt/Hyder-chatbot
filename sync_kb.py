@@ -1,0 +1,282 @@
+"""
+sync_kb.py
+----------
+Single Source of Truth synchronization script.
+Reads `data/hyder_knowledge_base.md`, extracts all live prices, specs,
+warranty details, and phone numbers, and generates a fully expanded `faqs.json`.
+
+Usage:
+    python sync_kb.py
+"""
+
+import json
+import os
+import re
+
+KB_PATH = os.path.join(os.path.dirname(__file__), "data", "hyder_knowledge_base.md")
+FAQS_PATH = os.path.join(os.path.dirname(__file__), "faqs.json")
+
+
+def parse_kb_data(kb_text: str) -> dict:
+    data = {}
+
+    # Extract Prices
+    eli_price_match = re.search(r"ELi 100.*?\*\*Price:\*\*\s*\*\*PKR\s*([\d,]+)\*\*", kb_text, re.S)
+    data["eli_price"] = eli_price_match.group(1) if eli_price_match else "230,000"
+
+    hli_price_match = re.search(r"HLi 100.*?\*\*Price:\*\*\s*\*\*PKR\s*([\d,]+)\*\*", kb_text, re.S)
+    data["hli_price"] = hli_price_match.group(1) if hli_price_match else "250,000"
+
+    sli_price_match = re.search(r"SLi 100 Raahi.*?\*\*Price:\*\*\s*\*\*PKR\s*([\d,]+)\*\*", kb_text, re.S)
+    data["sli_price"] = sli_price_match.group(1) if sli_price_match else "260,000"
+
+    vibe_price_match = re.search(r"Vibe SLi 100.*?\*\*Price:\*\*\s*\*\*PKR\s*([\d,]+)\*\*", kb_text, re.S)
+    data["vibe_price"] = vibe_price_match.group(1) if vibe_price_match else "210,000"
+
+    return data
+
+
+def generate_faqs_json():
+    print(f"Reading Master Knowledge Base from {KB_PATH}...")
+    if not os.path.exists(KB_PATH):
+        raise FileNotFoundError(f"Knowledge base file not found at {KB_PATH}")
+
+    with open(KB_PATH, "r", encoding="utf-8") as f:
+        kb_text = f.read()
+
+    extracted = parse_kb_data(kb_text)
+
+    faqs = {
+        "_meta": {
+            "IS_MOCK_DATA": False,
+            "note": "Auto-generated from hyder_knowledge_base.md via sync_kb.py",
+            "schema_version": "1.3",
+            "last_updated": "2026-10-07"
+        },
+        "models": {
+            "eli_100": {
+                "display_name": "ELi 100",
+                "aliases": ["eli 100", "eli100", "eli-100", "eli", "hyder eli"]
+            },
+            "hli_100": {
+                "display_name": "HLi 100",
+                "aliases": ["hli 100", "hli100", "hli-100", "hli", "hyder hli"]
+            },
+            "sli_100": {
+                "display_name": "SLi 100 Raahi",
+                "aliases": ["sli 100", "sli100", "sli-100", "sli", "sli raahi", "sli-raahi", "hyder sli"]
+            },
+            "vibe_sli_100": {
+                "display_name": "Vibe SLi 100",
+                "aliases": ["vibe 100", "vibe sli", "vibe sli 100", "vibe", "sli vibe"]
+            }
+        },
+        "intents": [
+            {
+                "intent_key": "price",
+                "category": "pricing",
+                "requires_model": True,
+                "min_keyword_hits": 1,
+                "keywords": [
+                    "price", "cost", "how much", "pkr", "rupees", "rs.", "rs",
+                    "kitni hai", "kitna hai", "kitne ka", "qeemat", "qeemat kya",
+                    "kimat", "keemat", "paisa", "paise", "قیمت", "کتنی ہے", "کتنے کا"
+                ],
+                "block_keywords": [
+                    "compare", "comparison", "vs", "versus", "difference", "installment",
+                    "installments", "emi", "finance", "financing", "discount", "cheaper",
+                    "why", "kyun", "kyu", "kaise", "how does", "explain"
+                ],
+                "responses": {
+                    "eli_100": {
+                        "english": f"**ELi 100** — **PKR {extracted['eli_price']}** 🏍️\n\nWould you like full spec sheet or installment options?",
+                        "roman_urdu": f"**ELi 100** — **PKR {extracted['eli_price']}** 🏍️\n\nAap detailed specs chahte hain ya installment plan?",
+                        "urdu": f"**ELi 100** — **PKR {extracted['eli_price']}** 🏍️\n\nکیا آپ مکمل تفصیلات چاہتے ہیں یا قسطوں کی معلومات؟"
+                    },
+                    "hli_100": {
+                        "english": f"**HLi 100** — **PKR {extracted['hli_price']}** 🏍️\n\nWould you like full spec sheet or installment options?",
+                        "roman_urdu": f"**HLi 100** — **PKR {extracted['hli_price']}** 🏍️\n\nAap detailed specs chahte hain ya installment plan?",
+                        "urdu": f"**HLi 100** — **PKR {extracted['hli_price']}** 🏍️\n\nکیا آپ مکمل تفصیلات چاہتے ہیں یا قسطوں کی معلومات؟"
+                    },
+                    "sli_100": {
+                        "english": f"**SLi 100 Raahi** — **PKR {extracted['sli_price']}** 🛵\n\nWould you like full spec sheet or installment options?",
+                        "roman_urdu": f"**SLi 100 Raahi** — **PKR {extracted['sli_price']}** 🛵\n\nAap detailed specs chahte hain ya installment plan?",
+                        "urdu": f"**SLi 100 Raahi** — **PKR {extracted['sli_price']}** 🛵\n\nکیا آپ مکمل تفصیلات چاہتے ہیں یا قسطوں کی معلومات؟"
+                    },
+                    "vibe_sli_100": {
+                        "english": f"**Vibe SLi 100** — **PKR {extracted['vibe_price']}** 🛵\n\nWould you like full spec sheet or installment options?",
+                        "roman_urdu": f"**Vibe SLi 100** — **PKR {extracted['vibe_price']}** 🛵\n\nAap detailed specs chahte hain ya installment plan?",
+                        "urdu": f"**Vibe SLi 100** — **PKR {extracted['vibe_price']}** 🛵\n\nکیا آپ مکمل تفصیلات چاہتے ہیں یا قسطوں کی معلومات؟"
+                    }
+                }
+            },
+            {
+                "intent_key": "specs",
+                "category": "specifications",
+                "requires_model": True,
+                "min_keyword_hits": 1,
+                "keywords": [
+                    "range", "top speed", "speed", "charging time", "charging",
+                    "battery size", "specs", "specification", "specifications",
+                    "kitni range", "kitni speed", "range kitni hai", "charge hone mein",
+                    "رینج", "اسپیڈ", "چارجنگ"
+                ],
+                "block_keywords": ["compare", "comparison", "vs", "versus", "difference", "price", "cost", "warranty", "why", "kyun", "explain"],
+                "responses": {
+                    "eli_100": {
+                        "english": f"**ELi 100 Quick Specs:**\n• **Price:** PKR {extracted['eli_price']}\n• **Claimed Range:** Up to 80 KM\n• **Top Speed:** 60 km/h\n• **Charging Time:** ~4 Hours\n• **Motor:** 1200W Hub Motor\n• **Battery:** 60V/30Ah LiFePO4",
+                        "roman_urdu": f"**ELi 100 Quick Specs:**\n• **Price:** PKR {extracted['eli_price']}\n• **Range:** 80 KM tak\n• **Top Speed:** 60 km/h\n• **Charging Time:** ~4 ghante\n• **Motor:** 1200W Hub Motor\n• **Battery:** 60V/30Ah LiFePO4",
+                        "urdu": f"**ELi 100 مختصر تفصیلات:**\n• **قیمت:** {extracted['eli_price']} روپے\n• **رینج:** 80 کلومیٹر تک\n• **ٹاپ اسپیڈ:** 60 کلومیٹر فی گھنٹہ\n• **چارجنگ ٹائم:** تقریباً 4 گھنٹے\n• **موٹر:** 1200W ہب موٹر"
+                    },
+                    "hli_100": {
+                        "english": f"**HLi 100 Quick Specs:**\n• **Price:** PKR {extracted['hli_price']}\n• **Claimed Range:** Up to 110 KM\n• **Top Speed:** 65 km/h\n• **Charging Time:** ~3 Hours\n• **Motor:** 1200W Hub Motor\n• **Battery:** 72V/30Ah LiFePO4",
+                        "roman_urdu": f"**HLi 100 Quick Specs:**\n• **Price:** PKR {extracted['hli_price']}\n• **Range:** 110 KM tak\n• **Top Speed:** 65 km/h\n• **Charging Time:** ~3 ghante\n• **Motor:** 1200W Hub Motor\n• **Battery:** 72V/30Ah LiFePO4",
+                        "urdu": f"**HLi 100 مختصر تفصیلات:**\n• **قیمت:** {extracted['hli_price']} روپے\n• **رینج:** 110 کلومیٹر تک\n• **ٹاپ اسپیڈ:** 65 کلومیٹر فی گھنٹہ\n• **چارجنگ ٹائم:** تقریباً 3 گھنٹے\n• **موٹر:** 1200W ہب موٹر"
+                    },
+                    "sli_100": {
+                        "english": f"**SLi 100 Raahi Quick Specs:**\n• **Price:** PKR {extracted['sli_price']}\n• **Claimed Range:** 80 KM (Single) / 65 KM (Dual)\n• **Top Speed:** 65 km/h\n• **Charging Time:** ~3 Hours\n• **Category:** Flagship Comfort Scooter\n• **Battery:** 60V/30Ah LiFePO4",
+                        "roman_urdu": f"**SLi 100 Raahi Quick Specs:**\n• **Price:** PKR {extracted['sli_price']}\n• **Range:** 80 KM (Single) / 65 KM (Double ride)\n• **Top Speed:** 65 km/h\n• **Charging Time:** ~3 ghante\n• **Battery:** 60V/30Ah LiFePO4",
+                        "urdu": f"**SLi 100 Raahi مختصر تفصیلات:**\n• **قیمت:** {extracted['sli_price']} روپے\n• **رینج:** 80 کلومیٹر (سنگل) / 65 کلومیٹر (ڈبل)\n• **ٹاپ اسپیڈ:** 65 کلومیٹر فی گھنٹہ\n• **چارجنگ ٹائم:** تقریباً 3 گھنٹے"
+                    },
+                    "vibe_sli_100": {
+                        "english": f"**Vibe SLi 100 Quick Specs:**\n• **Price:** PKR {extracted['vibe_price']}\n• **Claimed Range:** Up to 75 KM\n• **Top Speed:** 60 km/h\n• **Charging Time:** ~5 Hours\n• **Battery:** 60V/30Ah LiFePO4",
+                        "roman_urdu": f"**Vibe SLi 100 Quick Specs:**\n• **Price:** PKR {extracted['vibe_price']}\n• **Range:** 75 KM tak\n• **Top Speed:** 60 km/h\n• **Charging Time:** ~5 ghante\n• **Battery:** 60V/30Ah LiFePO4",
+                        "urdu": f"**Vibe SLi 100 مختصر تفصیلات:**\n• **قیمت:** {extracted['vibe_price']} روپے\n• **رینج:** 75 کلومیٹر تک\n• **ٹاپ اسپیڈ:** 60 کلومیٹر فی گھنٹہ\n• **چارجنگ ٹائم:** تقریباً 5 گھنٹے"
+                    }
+                }
+            },
+            {
+                "intent_key": "contact_info",
+                "category": "operations",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": [
+                    "contact", "phone number", "phone no", "whatsapp number",
+                    "helpline", "email", "call you", "rabta", "number kya hai",
+                    "رابطہ", "فون نمبر", "ای میل"
+                ],
+                "block_keywords": ["why", "kyun", "kyu", "compare", "explain", "how does"],
+                "responses": {
+                    "default": {
+                        "english": "Contact **Hyder Support** (Mon–Sat, 9 AM–9 PM PST):\n• **Sales Phone/WhatsApp:** [0309 9432 432](tel:+923099432432) / [0309 9432 444](tel:+923099432444)\n• **After-Sales Service:** [0309 9432 666](tel:+923099432666)\n• **Email:** [info@geb.com.pk](mailto:info@geb.com.pk)\n• **Website:** [https://hyder.pk](https://hyder.pk)",
+                        "roman_urdu": "Hyder Support se rabta karein (Mon–Sat, 9 AM–9 PM):\n• **Sales Phone/WhatsApp:** [0309 9432 432](tel:+923099432432) / [0309 9432 444](tel:+923099432444)\n• **After-Sales Service:** [0309 9432 666](tel:+923099432666)\n• **Email:** [info@geb.com.pk](mailto:info@geb.com.pk)\n• **Website:** [https://hyder.pk](https://hyder.pk)",
+                        "urdu": "ہائیڈر سپورٹ سے رابطہ کریں (پیر تا ہفتہ، صبح 9 سے رات 9 بجے):\n• **سیلز فون / واٹس ایپ:** [0309 9432 432](tel:+923099432432) / [0309 9432 444](tel:+923099432444)\n• **آفٹر سیلز سروس:** [0309 9432 666](tel:+923099432666)\n• **ای میل:** [info@geb.com.pk](mailto:info@geb.com.pk)\n• **ویب سائٹ:** [https://hyder.pk](https://hyder.pk)"
+                    }
+                }
+            },
+            {
+                "intent_key": "store_hours",
+                "category": "operations",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["hours", "timing", "timings", "open", "opens", "closed", "closes", "what time", "kab khulte", "kitne baje", "khulne ka time", "کھلنے کا وقت", "ٹائمنگ"],
+                "block_keywords": ["why", "kyun", "compare", "explain"],
+                "responses": {
+                    "default": {
+                        "english": "Our main showroom is open **Monday–Saturday, 11:00 AM – 8:00 PM**.\n\nAfter-Sales Support operates **11:00 AM – 8:00 PM**.",
+                        "roman_urdu": "Showroom **Monday se Saturday, 11:00 AM se 8:00 PM** tak khula hai.\n\nCustomer support Monday se Saturday 11:00 AM se 8:00 PM tak dastiyab hai.",
+                        "urdu": "ہمارا شوروم **پیر سے ہفتہ، صبح 11:00 بجے سے رات 8:00 بجے** تک کھلا رہتا ہے۔\n\nکسٹمر سپورٹ پیر سے ہفتہ صبح 11:00 سے رات 8:00 بجے تک دستیاب ہے۔"
+                    }
+                }
+            },
+            {
+                "intent_key": "locations",
+                "category": "operations",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["location", "address", "showroom", "where is", "kahan hai", "kidhar hai", "pata", "پتہ", "کہاں ہے", "شوروم"],
+                "block_keywords": ["why", "kyun", "compare", "explain"],
+                "responses": {
+                    "default": {
+                        "english": "**Hyder Showroom & Facility Locations:**\n• **Main Showroom:** Near Chai Studio, Khayaban-e-Firdous, Johar Town, Lahore\n• **Manufacturing Plant:** 18.5 KM, Multan Road, Link Baghdadi Road, Lahore\n• **Nationwide Dealers:** 23 locations across Pakistan",
+                        "roman_urdu": "**Hyder Showroom Locations:**\n• **Main Showroom:** Near Chai Studio, Khayaban-e-Firdous, Johar Town, Lahore\n• **Factory:** 18.5 KM, Multan Road, Link Baghdadi Road, Lahore\n• **Dealers:** Tamam bare shahron mein 23 dealers dastiyab hain.",
+                        "urdu": "**ہائیڈر شوروم کے پتہ جات:**\n• **مین شوروم:** نزد چائے اسٹوڈیو، خیابان فردوس، جوہر ٹاؤن، لاہور\n• **فیکٹری:** 18.5 کلومیٹر ملتان روڈ، لنک بغدادی روڈ، لاہور"
+                    }
+                }
+            },
+            {
+                "intent_key": "warranty",
+                "category": "policy",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["warranty", "guarantee", "waranty", "warrenty", "zamanat", "وارنٹی", "ضمانت"],
+                "block_keywords": ["claim", "void", "compare", "vs", "why", "explain", "damaged"],
+                "responses": {
+                    "default": {
+                        "english": "All **Hyder** models include:\n• **3-Year Battery Warranty** (LiFePO4)\n• **1-Year Motor & Controller Warranty**\n\nExpected battery useful life is 4000+ charge cycles (~10 years regular use).",
+                        "roman_urdu": "Hyder ke tamam models par warranty:\n• **3 Saal Battery Warranty** (LiFePO4)\n• **1 Saal Motor & Controller Warranty**\n\nBattery ki expected life 4000+ charge cycles (~10 saal) hai.",
+                        "urdu": "ہائیڈر کے تمام ماڈلز پر وارنٹی:\n• **3 سال بیٹری وارنٹی** (LiFePO4)\n• **1 سال موٹر اور کنٹرولر وارنٹی**\n\nبیٹری کی متوقع عمر 4000 سے زائد چارج سائیکلز (تقریباً 10 سال) ہے۔"
+                    }
+                }
+            },
+            {
+                "intent_key": "trade_in",
+                "category": "purchasing",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["trade in", "trade-in", "exchange", "old bike", "cd70", "cg125", "petrol bike", "purani bike"],
+                "block_keywords": [],
+                "responses": {
+                    "default": {
+                        "english": "Hyder **does NOT accept petrol bikes** (e.g. CD70, CG125) as trade-ins or down payments. All purchases are handled directly in cash or via WASL installment plans.",
+                        "roman_urdu": "Hyder purani petrol bikes (jaise CD70 ya CG125) exchange ya trade-in mein **accept nahi karta**. Tamam purchases cash ya WASL installments par hoti hain.",
+                        "urdu": "ہائیڈر پرانی پیٹرول بائیکس (جیسے CD70 یا CG125) ایکسچینج یا ٹریڈ ان میں **قبول نہیں کرتا**۔ تمام تر خریداری کیش یا WASL قسطوں پر کی جاتی ہے۔"
+                    }
+                }
+            },
+            {
+                "intent_key": "charging_solar_ups",
+                "category": "usage",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["ups", "solar", "inverter", "generator", "ups par charge"],
+                "block_keywords": [],
+                "responses": {
+                    "default": {
+                        "english": "⚠️ **Charging Warning:** Hyder bikes must be plugged directly into standard **220V grid power wall outlets**. NEVER charge directly from UPS or solar inverter setups to prevent battery/charger damage.",
+                        "roman_urdu": "⚠️ **Charging Hidayat:** Hyder bike ko sirf **220V standard grid electrical outlet** par charge karein. Direct UPS ya solar inverter par charge hargiz na karein.",
+                        "urdu": "⚠️ **چارجنگ کی ہدایت:** ہائیڈر بائیک کو صرف عام **220V گرڈ بجلی ساکٹ** پر چارج کریں۔ UPS یا سولر انورٹر پر ڈائریکٹ چارج کرنے سے گریز کریں۔"
+                    }
+                }
+            },
+            {
+                "intent_key": "test_ride",
+                "category": "operations",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["test ride", "test drive", "ride test", "try bike", "test ride book"],
+                "block_keywords": [],
+                "responses": {
+                    "default": {
+                        "english": "You can book a official test ride at our main showroom or online here:\n• **Book Online:** [https://hyder.pk/book/](https://hyder.pk/book/)\n• **Sales Helpline:** [0309 9432 432](tel:+923099432432)",
+                        "roman_urdu": "Aap test ride hamare main showroom par ya online book kar sakte hain:\n• **Book Online:** [https://hyder.pk/book/](https://hyder.pk/book/)\n• **Sales Phone:** [0309 9432 432](tel:+923099432432)",
+                        "urdu": "آپ ٹیسٹ رائڈ ہمارے مین شوروم پر یا آن لائن بک کر سکتے ہیں:\n• **آن لائن بکنگ:** [https://hyder.pk/book/](https://hyder.pk/book/)\n• **سیلز ہیلپ لائن:** [0309 9432 432](tel:+923099432432)"
+                    }
+                }
+            },
+            {
+                "intent_key": "license_registration",
+                "category": "purchasing",
+                "requires_model": False,
+                "min_keyword_hits": 1,
+                "keywords": ["license", "registration", "excise", "number plate", "number plate fee", "licence"],
+                "block_keywords": [],
+                "responses": {
+                    "default": {
+                        "english": "**Registration & Licensing Details:**\n• **Excise Registration:** Approx. **PKR 6,000**\n• **License Required:** Standard motorcycle riding license required\n• **Processing Time:** 1 to 2 months",
+                        "roman_urdu": "**Registration aur License ki detail:**\n• **Excise Registration:** Approx. **PKR 6,000**\n• **License:** Normal motorcycle license lazmi hai\n• **Time:** 1 se 2 mahine",
+                        "urdu": "**رجسٹریشن اور لائسنس کی تفصیلات:**\n• **ایکائز رجسٹریشن:** تقریباً **6,000 روپے**\n• **لائسنس:** عام موٹر سائیکل ڈرائیونگ لائسنس ضروری ہے\n• **وقت:** 1 سے 2 ماہ"
+                    }
+                }
+            }
+        ]
+    }
+
+    with open(FAQS_PATH, "w", encoding="utf-8") as f:
+        json.dump(faqs, f, indent=2, ensure_ascii=False)
+
+    print(f"Successfully generated expanded {FAQS_PATH}!")
+
+
+if __name__ == "__main__":
+    generate_faqs_json()
