@@ -15,8 +15,14 @@ services:
     volumes:
       - ./chroma_db:/app/chroma_db
       - ./logs:/app/logs
+      # Persist the downloaded embedding model so it isn't re-fetched from
+      # HuggingFace every time the container is recreated.
+      - hf_cache:/home/appuser/.cache/huggingface
     networks:
       - chatwoot_default
+
+volumes:
+  hf_cache:
 
 networks:
   chatwoot_default:
